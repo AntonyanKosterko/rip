@@ -827,3 +827,134 @@ img {
         min-height: 500px;
     }
 }
+
+/* ============================================================
+   Lab 2: Дополнительные стили
+   ============================================================ */
+
+/* --- Неактивная корзина --- */
+.cart-inactive {
+    cursor: default;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.cart-badge-empty {
+    background-color: #555 !important;
+}
+
+/* --- Кнопка «Добавить в заявку» (vibes) --- */
+.vibes-add-form {
+    margin: 0;
+    padding: 0;
+}
+
+.vibes-add-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #D32F2F;
+    transition: transform 0.2s, color 0.2s;
+}
+
+.vibes-add-btn:hover {
+    color: #FF5252;
+    transform: scale(1.15);
+}
+
+.vibes-add-btn span {
+    color: #D32F2F;
+}
+
+.vibes-add-btn:hover span {
+    color: #FF5252;
+}
+
+/* --- Статус-бейджи --- */
+.status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 2px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-draft {
+    background-color: #1565C0;
+    color: #FFFFFF;
+}
+
+.status-deleted {
+    background-color: #616161;
+    color: #FFFFFF;
+}
+
+.status-formed {
+    background-color: #F57F17;
+    color: #FFFFFF;
+}
+
+.status-completed {
+    background-color: #2E7D32;
+    color: #FFFFFF;
+}
+
+.status-rejected {
+    background-color: #C62828;
+    color: #FFFFFF;
+}
+
+/* --- Кнопка «Удалить заявку» --- */
+.calc-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.calc-header-right {
+    display: flex;
+    align-items: center;
+}
+
+.delete-form {
+    margin: 0;
+}
+
+.btn-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: #C62828;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 2px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-delete:hover {
+    background-color: #E53935;
+}
+
+.btn-delete svg {
+    stroke: #FFFFFF;
+}
+
+/* --- Ссылка-акцент --- */
+.link-accent {
+    color: #019DF8;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.link-accent:hover {
+    color: #4FC3F7;
+    text-decoration: underline;
+}

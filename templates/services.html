@@ -14,7 +14,7 @@
     {{range .Services}}
     <a href="/services/{{.ID}}/" class="service-card" data-service-id="{{.ID}}">
         <div class="card-image">
-            <img src="{{.ImageURL}}" alt="{{.Name}}" loading="lazy">
+            <img src="{{.GetImageURL}}" alt="{{.Name}}" loading="lazy">
             <div class="card-image-overlay"></div>
             <span class="card-label">Наблюдение</span>
             <span class="card-coords-badge">{{.Coordinates}}</span>

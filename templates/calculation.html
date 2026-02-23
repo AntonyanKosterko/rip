@@ -1,49 +1,72 @@
-{{define "title"}}Расчёт №{{.Calculation.ID}} — Видимость МКС{{end}}
+{{define "title"}}Заявка №{{.Calculation.ID}} — Видимость МКС{{end}}
 
 {{define "content"}}
-<!-- Страница расчёта id={{.Calculation.ID}} -->
+<!-- Страница заявки id={{.Calculation.ID}} -->
 <div class="calc-page">
 
-    <!-- Поля расчёта (сверху) -->
+    <!-- Поля заявки (сверху) -->
     <div class="calc-page-header">
         <div class="calc-header-left">
-            <h1 class="calc-page-title">Расчёт №{{.Calculation.ID}}</h1>
-            <span class="status-badge">{{.Calculation.Status}}</span>
+            <h1 class="calc-page-title">Заявка №{{.Calculation.ID}}</h1>
+            <span class="status-badge status-{{.Calculation.Status}}">{{.Calculation.StatusRu}}</span>
         </div>
+        {{if .IsDraft}}
+        <div class="calc-header-right">
+            <form method="post" action="/calculations/{{.Calculation.ID}}/delete/" class="delete-form">
+                <button type="submit" class="btn-delete" title="Удалить заявку" onclick="return confirm('Удалить заявку №{{.Calculation.ID}}?')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Удалить заявку
+                </button>
+            </form>
+        </div>
+        {{end}}
     </div>
 
     <div class="calc-fields">
         <div class="calc-field">
-            <span class="field-label">Название</span>
-            <span class="field-value">{{.Calculation.Title}}</span>
-        </div>
-        <div class="calc-field">
-            <span class="field-label">Дата наблюдения</span>
-            <span class="field-value">{{.Calculation.ObservationDate}}</span>
+            <span class="field-label">Создатель</span>
+            <span class="field-value">{{.CreatorName}}</span>
         </div>
         <div class="calc-field">
             <span class="field-label">Дата создания</span>
-            <span class="field-value">{{.Calculation.CreatedAt}}</span>
+            <span class="field-value">{{.Calculation.GetCreatedAt}}</span>
         </div>
+        <div class="calc-field">
+            <span class="field-label">Дата наблюдения</span>
+            <span class="field-value">{{.Calculation.GetObservationDate}}</span>
+        </div>
+        <div class="calc-field">
+            <span class="field-label">Сформирована</span>
+            <span class="field-value">{{.Calculation.GetFormedAt}}</span>
+        </div>
+        <div class="calc-field">
+            <span class="field-label">Завершена</span>
+            <span class="field-value">{{.Calculation.GetCompletedAt}}</span>
+        </div>
+        {{if .ModeratorName}}
         <div class="calc-field">
             <span class="field-label">Модератор</span>
-            <span class="field-value">{{.Calculation.Moderator}}</span>
+            <span class="field-value">{{.ModeratorName}}</span>
         </div>
+        {{end}}
         <div class="calc-field">
             <span class="field-label">Статус</span>
-            <span class="field-value">{{.Calculation.Status}}</span>
+            <span class="field-value">{{.Calculation.StatusRu}}</span>
         </div>
     </div>
 
     <!-- Результат вычислений -->
     <div class="calc-result">
         <h2 class="calc-result-title">Результат расчёта</h2>
-        <p class="calc-result-text">{{.Calculation.CalculationResult}}</p>
+        <p class="calc-result-text">{{.Calculation.GetTotalVisibility}}</p>
     </div>
 
-    <!-- Услуги в расчёте — карточки как таблица -->
+    <!-- Точки наблюдения в заявке — карточки как таблица -->
     <div class="calc-services-section">
-        <h2 class="calc-services-title">Точки наблюдения в расчёте ({{len .CalcServices}})</h2>
+        <h2 class="calc-services-title">Точки наблюдения в заявке ({{len .CalcServices}})</h2>
 
         <!-- Заголовок-карточка таблицы -->
         <div class="calc-table-header">
@@ -60,7 +83,7 @@
         {{range .CalcServices}}
         <div class="calc-service-card" data-service-id="{{.ID}}">
             <div class="calc-td calc-td-img">
-                <img src="{{.ImageURL}}" alt="{{.Name}}" class="calc-service-thumb">
+                <img src="{{.GetImageURL}}" alt="{{.Name}}" class="calc-service-thumb">
             </div>
             <div class="calc-td calc-td-name">
                 <strong>{{.Name}}</strong>
@@ -83,6 +106,11 @@
             <div class="calc-td calc-td-result">
                 <span class="position-result">{{.PositionResult}}</span>
             </div>
+        </div>
+        {{else}}
+        <div class="no-results">
+            <p>В заявке пока нет точек наблюдения.</p>
+            <p><a href="/" class="link-accent">Добавить точки →</a></p>
         </div>
         {{end}}
     </div>
