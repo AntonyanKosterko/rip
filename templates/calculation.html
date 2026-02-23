@@ -1,0 +1,91 @@
+{{define "title"}}Расчёт №{{.Calculation.ID}} — Видимость МКС{{end}}
+
+{{define "content"}}
+<!-- Страница расчёта id={{.Calculation.ID}} -->
+<div class="calc-page">
+
+    <!-- Поля расчёта (сверху) -->
+    <div class="calc-page-header">
+        <div class="calc-header-left">
+            <h1 class="calc-page-title">Расчёт №{{.Calculation.ID}}</h1>
+            <span class="status-badge">{{.Calculation.Status}}</span>
+        </div>
+    </div>
+
+    <div class="calc-fields">
+        <div class="calc-field">
+            <span class="field-label">Название</span>
+            <span class="field-value">{{.Calculation.Title}}</span>
+        </div>
+        <div class="calc-field">
+            <span class="field-label">Дата наблюдения</span>
+            <span class="field-value">{{.Calculation.ObservationDate}}</span>
+        </div>
+        <div class="calc-field">
+            <span class="field-label">Дата создания</span>
+            <span class="field-value">{{.Calculation.CreatedAt}}</span>
+        </div>
+        <div class="calc-field">
+            <span class="field-label">Модератор</span>
+            <span class="field-value">{{.Calculation.Moderator}}</span>
+        </div>
+        <div class="calc-field">
+            <span class="field-label">Статус</span>
+            <span class="field-value">{{.Calculation.Status}}</span>
+        </div>
+    </div>
+
+    <!-- Результат вычислений -->
+    <div class="calc-result">
+        <h2 class="calc-result-title">Результат расчёта</h2>
+        <p class="calc-result-text">{{.Calculation.CalculationResult}}</p>
+    </div>
+
+    <!-- Услуги в расчёте — карточки как таблица -->
+    <div class="calc-services-section">
+        <h2 class="calc-services-title">Точки наблюдения в расчёте ({{len .CalcServices}})</h2>
+
+        <!-- Заголовок-карточка таблицы -->
+        <div class="calc-table-header">
+            <div class="calc-th calc-th-img"></div>
+            <div class="calc-th calc-th-name">Точка</div>
+            <div class="calc-th calc-th-coords">Координаты</div>
+            <div class="calc-th calc-th-order">№</div>
+            <div class="calc-th calc-th-primary">Основная</div>
+            <div class="calc-th calc-th-observer">ФИО наблюдателя</div>
+            <div class="calc-th calc-th-result">Положение</div>
+        </div>
+
+        <!-- Карточки-строки -->
+        {{range .CalcServices}}
+        <div class="calc-service-card" data-service-id="{{.ID}}">
+            <div class="calc-td calc-td-img">
+                <img src="{{.ImageURL}}" alt="{{.Name}}" class="calc-service-thumb">
+            </div>
+            <div class="calc-td calc-td-name">
+                <strong>{{.Name}}</strong>
+                <span>{{.Country}}</span>
+            </div>
+            <div class="calc-td calc-td-coords">
+                <span>{{.Coordinates}}</span>
+            </div>
+            <div class="calc-td calc-td-order">
+                <span>{{.ObservationOrder}}</span>
+            </div>
+            <div class="calc-td calc-td-primary">
+                <span class="{{if .IsPrimary}}primary-yes{{else}}primary-no{{end}}">
+                    {{if .IsPrimary}}Да{{else}}Нет{{end}}
+                </span>
+            </div>
+            <div class="calc-td calc-td-observer">
+                <span>{{.ObserverName}}</span>
+            </div>
+            <div class="calc-td calc-td-result">
+                <span class="position-result">{{.PositionResult}}</span>
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+</div>
+{{end}}

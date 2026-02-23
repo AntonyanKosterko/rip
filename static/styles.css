@@ -1,0 +1,829 @@
+/* ============================================================
+   Видимость МКС — Стилистика тёмно-синяя + красные квадратные кнопки
+   Цвета (Роскосмос + правки):
+     Фон:           #001233 (тёмно-синий)
+     Хедер/Футер:   #000B1D (почти чёрный синий)
+     Карточки:      #0A1929
+     Акцент:        #D32F2F (красный — кнопки квадратные)
+     Голубой:       #019DF8
+     Синий:         #0348A3
+     Текст:         #FFFFFF, #B0BEC5
+     Бордер:        #1A3A5C
+   ============================================================ */
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #001233;
+    color: #FFFFFF;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.6;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* --- Header --- */
+.main-header {
+    background-color: #000B1D;
+    border-bottom: 1px solid #1A3A5C;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.home-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #FFFFFF;
+    transition: color 0.2s;
+}
+
+.home-btn:hover {
+    color: #019DF8;
+}
+
+.home-btn-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* --- Cart Icon (только на стр.1, под хедером справа) --- */
+.cart-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    color: #FFFFFF;
+    transition: color 0.2s;
+}
+
+.cart-icon:hover {
+    color: #019DF8;
+}
+
+.cart-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #D32F2F;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 0; /* квадратный */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* --- Search Bar (под хедером) --- */
+.search-bar {
+    background: #000B1D;
+    border-bottom: 1px solid #1A3A5C;
+    padding: 8px 24px;
+}
+
+.search-form {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    gap: 8px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 10px 16px;
+    background: #0A1929;
+    border: 1px solid #1A3A5C;
+    border-radius: 0; /* квадратный */
+    color: #FFFFFF;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input::placeholder {
+    color: #607D8B;
+}
+
+.search-input:focus {
+    border-color: #019DF8;
+}
+
+.search-btn {
+    padding: 10px 16px;
+    background: #D32F2F;
+    border: none;
+    border-radius: 0; /* квадратный */
+    color: #FFFFFF;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.search-btn:hover {
+    background: #B71C1C;
+}
+
+/* --- Content --- */
+.content {
+    flex: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+    width: 100%;
+}
+
+/* --- Section Header --- */
+.section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    border-left: 4px solid #D32F2F;
+    padding-left: 12px;
+}
+
+.search-result-info {
+    font-size: 0.9rem;
+    color: #B0BEC5;
+}
+
+/* --- Services Grid --- */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.service-card {
+    background: #0A1929;
+    border: 1px solid #1A3A5C;
+    border-radius: 0; /* квадратный */
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+    display: flex;
+    flex-direction: column;
+}
+
+.service-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(1, 157, 248, 0.15);
+    border-color: #019DF8;
+}
+
+.card-image {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.service-card:hover .card-image img {
+    transform: scale(1.05);
+}
+
+.card-image-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 11, 29, 0.8) 0%, transparent 60%);
+}
+
+.card-label {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #D32F2F;
+    color: #FFFFFF;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 0; /* квадратный */
+}
+
+.card-coords-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(0, 18, 51, 0.85);
+    color: #019DF8;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border: 1px solid #019DF8;
+    border-radius: 0;
+}
+
+.card-content {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 4px;
+}
+
+.card-country {
+    font-size: 0.85rem;
+    color: #B0BEC5;
+    margin-bottom: 12px;
+}
+
+.card-meta {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #607D8B;
+}
+
+.card-elevation {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.card-timezone {
+    color: #019DF8;
+    font-weight: 600;
+}
+
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 48px 24px;
+    color: #607D8B;
+}
+
+.no-results p:first-child {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* ============================================================
+   Страница 2: Vibes-стиль (портретная карточка)
+   Вдохновлено скрином TikTok/ВК Клипы:
+   - Полноэкранное изображение
+   - Текст поверх изображения снизу
+   - Боковые иконки действий справа
+   ============================================================ */
+
+.vibes-layout {
+    max-width: 100%;
+    padding: 0;
+}
+
+.vibes-card {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto 32px;
+    aspect-ratio: 9 / 16;
+    max-height: 80vh;
+    overflow: hidden;
+    background: #000;
+}
+
+.vibes-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vibes-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(0, 11, 29, 0.95) 0%,
+        rgba(0, 11, 29, 0.4) 30%,
+        transparent 60%,
+        rgba(0, 11, 29, 0.3) 100%
+    );
+}
+
+.vibes-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 60px;
+    padding: 24px;
+}
+
+.vibes-label {
+    display: inline-block;
+    background: #D32F2F;
+    color: #FFFFFF;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    border-radius: 0;
+}
+
+.vibes-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.vibes-subtitle {
+    font-size: 1rem;
+    color: #B0BEC5;
+    margin-bottom: 12px;
+}
+
+.vibes-coords {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #019DF8;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.vibes-coords svg {
+    flex-shrink: 0;
+}
+
+/* Боковые иконки (как в TikTok/ВК Клипы) */
+.vibes-side-actions {
+    position: absolute;
+    right: 12px;
+    bottom: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+}
+
+.vibes-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: #FFFFFF;
+}
+
+.vibes-action svg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.vibes-action span {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* --- Detail Page (страница 2: секции под vibes-карточкой) --- */
+.detail-page {
+    padding-bottom: 32px;
+}
+
+.detail-video-section,
+.detail-info-section,
+.detail-description-section {
+    max-width: 800px;
+    margin: 0 auto 32px;
+    padding: 0 24px;
+}
+
+.detail-section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 16px;
+    border-left: 4px solid #D32F2F;
+    padding-left: 12px;
+}
+
+.video-wrapper {
+    border: 1px solid #1A3A5C;
+    overflow: hidden;
+    background: #000;
+}
+
+.detail-video {
+    width: 100%;
+    display: block;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.info-card {
+    background: #0A1929;
+    border: 1px solid #1A3A5C;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s;
+}
+
+.info-card:hover {
+    border-color: #019DF8;
+}
+
+.info-icon {
+    color: #019DF8;
+    margin-bottom: 4px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #607D8B;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.info-value {
+    font-size: 0.95rem;
+    color: #FFFFFF;
+    font-weight: 500;
+}
+
+.detail-description-text {
+    color: #B0BEC5;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    text-align: justify;
+}
+
+/* ============================================================
+   Страница 3: Расчёт (бывшая «Заявка»)
+   Услуги — карточки как таблица с заголовком
+   ============================================================ */
+
+.calc-page {
+    padding-bottom: 32px;
+}
+
+.calc-page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.calc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.calc-page-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    border-left: 4px solid #D32F2F;
+    padding-left: 12px;
+}
+
+.status-badge {
+    display: inline-block;
+    background: #1B5E20;
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 0;
+}
+
+/* Поля расчёта */
+.calc-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.calc-field {
+    background: #0A1929;
+    border: 1px solid #1A3A5C;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.field-label {
+    font-size: 0.75rem;
+    color: #607D8B;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.field-value {
+    font-size: 0.95rem;
+    color: #FFFFFF;
+    font-weight: 500;
+}
+
+/* Результат расчёта */
+.calc-result {
+    background: linear-gradient(135deg, #0A1929 0%, #0D2137 100%);
+    border: 1px solid #019DF8;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+}
+
+.calc-result-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #019DF8;
+    margin-bottom: 8px;
+    border-left: 4px solid #D32F2F;
+    padding-left: 12px;
+}
+
+.calc-result-text {
+    color: #B0BEC5;
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+/* Таблица-карточки */
+.calc-services-section {
+    margin-top: 8px;
+}
+
+.calc-services-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 16px;
+    border-left: 4px solid #D32F2F;
+    padding-left: 12px;
+}
+
+/* Заголовок таблицы — отдельная карточка */
+.calc-table-header {
+    display: grid;
+    grid-template-columns: 64px 1.5fr 1fr 50px 80px 1.5fr 1.5fr;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #0348A3;
+    border: 1px solid #0348A3;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.calc-th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Карточки-строки */
+.calc-service-card {
+    display: grid;
+    grid-template-columns: 64px 1.5fr 1fr 50px 80px 1.5fr 1.5fr;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #0A1929;
+    border: 1px solid #1A3A5C;
+    margin-bottom: 4px;
+    align-items: center;
+    transition: border-color 0.2s;
+}
+
+.calc-service-card:hover {
+    border-color: #019DF8;
+}
+
+.calc-td {
+    font-size: 0.85rem;
+    color: #FFFFFF;
+}
+
+.calc-service-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border: 1px solid #1A3A5C;
+}
+
+.calc-td-name strong {
+    display: block;
+    font-size: 0.9rem;
+    color: #FFFFFF;
+}
+
+.calc-td-name span {
+    display: block;
+    font-size: 0.75rem;
+    color: #607D8B;
+}
+
+.calc-td-coords span {
+    color: #019DF8;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.calc-td-order span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #0348A3;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.primary-yes {
+    background: #1B5E20;
+    color: #FFFFFF;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.primary-no {
+    color: #607D8B;
+    font-size: 0.75rem;
+}
+
+.calc-td-observer span {
+    font-size: 0.8rem;
+    color: #B0BEC5;
+}
+
+.position-result {
+    color: #019DF8;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* --- Footer --- */
+.main-footer {
+    background-color: #000B1D;
+    border-top: 1px solid #1A3A5C;
+    padding: 20px 24px;
+    margin-top: auto;
+}
+
+.footer-content {
+    max-width: 1280px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.footer-content p {
+    color: #607D8B;
+    font-size: 0.85rem;
+}
+
+.footer-sub {
+    margin-top: 4px;
+    font-size: 0.75rem !important;
+    color: #455A64 !important;
+}
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+    .calc-table-header,
+    .calc-service-card {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .calc-table-header {
+        display: none;
+    }
+
+    .calc-service-card {
+        padding: 16px;
+    }
+
+    .calc-td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.7rem;
+        color: #607D8B;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+
+    .calc-service-thumb {
+        width: 64px;
+        height: 64px;
+    }
+
+    .vibes-card {
+        max-height: 70vh;
+    }
+
+    .vibes-title {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-content {
+        padding: 0 16px;
+    }
+
+    .content {
+        padding: 16px;
+    }
+
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .calc-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .vibes-card {
+        aspect-ratio: auto;
+        max-height: none;
+        min-height: 500px;
+    }
+}

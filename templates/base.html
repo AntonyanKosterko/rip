@@ -1,0 +1,76 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{template "title" .}}</title>
+    <!-- CSS: тёмно-синяя тема, красные квадратные кнопки
+         Основные цвета (из roscosmos.ru + правки):
+         1. Фон хедера/футера: #000B1D (тёмно-синий)
+         2. Основной фон: #001233 (тёмно-синий)
+         3. Акцентные кнопки: #D32F2F (красный, квадратные)
+         4. Карточки: #0A1929 с голубой обводкой
+         5. Текст: #FFFFFF, #B0BEC5
+         Доп. цвета: #019DF8 (голубой акцент), #0348A3 (синий)
+    -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <!-- Кнопка/иконка Домой -->
+            <a href="/" class="home-btn" title="На главную — Видимость МКС">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span class="home-btn-text">Видимость МКС</span>
+            </a>
+
+            {{if .ShowCart}}
+            <!-- Корзина-иконка (только на странице 1) -->
+            <a href="/calculations/{{.CalcID}}/" class="cart-icon" title="Текущий расчёт">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+                <span class="cart-badge">{{.CalcCount}}</span>
+            </a>
+            {{end}}
+        </div>
+
+        {{if .ShowSearch}}
+        <!-- Поиск под хедером -->
+        <div class="search-bar">
+            <form method="get" action="/" class="search-form">
+                <input type="text"
+                       name="search"
+                       value="{{.SearchQuery}}"
+                       placeholder="Поиск по названию точки..."
+                       class="search-input">
+                <button type="submit" class="search-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+        {{end}}
+    </header>
+
+    <main class="content">
+        {{template "content" .}}
+    </main>
+
+    <footer class="main-footer">
+        <div class="footer-content">
+            <p>&copy; 2026 — Определение времени видимости МКС с Земли</p>
+            <p class="footer-sub">Лабораторная работа №1 — РИП, МГТУ им. Н.Э. Баумана</p>
+        </div>
+    </footer>
+</body>
+</html>
+{{end}}
