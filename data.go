@@ -77,8 +77,8 @@ func (p ObservationPoint) GetWeatherConditions() string {
 	return ""
 }
 
-// Calculation — заявка (расчёт видимости МКС)
-type Calculation struct {
+// ISSPosition — заявка (определение положения МКС)
+type ISSPosition struct {
 	ID              int
 	Status          string
 	CreatedAt       time.Time
@@ -91,7 +91,7 @@ type Calculation struct {
 }
 
 // StatusRu — русское название статуса
-func (c Calculation) StatusRu() string {
+func (c ISSPosition) StatusRu() string {
 	switch c.Status {
 	case "draft":
 		return "Черновик"
@@ -109,7 +109,7 @@ func (c Calculation) StatusRu() string {
 }
 
 // GetObservationDate — форматированная дата наблюдения
-func (c Calculation) GetObservationDate() string {
+func (c ISSPosition) GetObservationDate() string {
 	if c.ObservationDate.Valid {
 		return c.ObservationDate.Time.Format("02.01.2006")
 	}
@@ -117,12 +117,12 @@ func (c Calculation) GetObservationDate() string {
 }
 
 // GetCreatedAt — форматированная дата создания
-func (c Calculation) GetCreatedAt() string {
+func (c ISSPosition) GetCreatedAt() string {
 	return c.CreatedAt.Format("02.01.2006 15:04")
 }
 
 // GetFormedAt — форматированная дата формирования
-func (c Calculation) GetFormedAt() string {
+func (c ISSPosition) GetFormedAt() string {
 	if c.FormedAt.Valid {
 		return c.FormedAt.Time.Format("02.01.2006 15:04")
 	}
@@ -130,7 +130,7 @@ func (c Calculation) GetFormedAt() string {
 }
 
 // GetCompletedAt — форматированная дата завершения
-func (c Calculation) GetCompletedAt() string {
+func (c ISSPosition) GetCompletedAt() string {
 	if c.CompletedAt.Valid {
 		return c.CompletedAt.Time.Format("02.01.2006 15:04")
 	}
@@ -138,31 +138,57 @@ func (c Calculation) GetCompletedAt() string {
 }
 
 // GetTotalVisibility — результат расчёта
-func (c Calculation) GetTotalVisibility() string {
+func (c ISSPosition) GetTotalVisibility() string {
 	if c.TotalVisibility.Valid {
 		return c.TotalVisibility.String
 	}
 	return "Расчёт не выполнен"
 }
 
-// CalculationPoint — связь м-м: точка наблюдения в заявке
-type CalculationPoint struct {
+// ISSPositionPoint — связь м-м: точка наблюдения в заявке
+type ISSPositionPoint struct {
 	ID               int
-	CalculationID    int
+	ISSPositionID    int
 	PointID          int
 	ObservationOrder int
 	IsPrimary        bool
 	ObserverName     sql.NullString
-	PositionResult   sql.NullString
+	ISSLatitude      sql.NullFloat64
+	ISSLongitude     sql.NullFloat64
 }
 
-// EnrichedCalcPoint — точка в заявке с полными данными
-type EnrichedCalcPoint struct {
+// EnrichedISSPoint — точка в заявке с полными данными
+type EnrichedISSPoint struct {
 	ObservationPoint
 	ObservationOrder int
 	IsPrimary        bool
 	ObserverName     string
-	PositionResult   string
+	ISSLatitude      sql.NullFloat64
+	ISSLongitude     sql.NullFloat64
+}
+
+// GetISSCoordinates — форматированные координаты МКС
+func (e EnrichedISSPoint) GetISSCoordinates() string {
+	if e.ISSLatitude.Valid && e.ISSLongitude.Valid {
+		return fmt.Sprintf("%.4f°, %.4f°", e.ISSLatitude.Float64, e.ISSLongitude.Float64)
+	}
+	return "—"
+}
+
+// GetISSLatitudeStr — широта МКС
+func (e EnrichedISSPoint) GetISSLatitudeStr() string {
+	if e.ISSLatitude.Valid {
+		return fmt.Sprintf("%.4f°", e.ISSLatitude.Float64)
+	}
+	return "—"
+}
+
+// GetISSLongitudeStr — долгота МКС
+func (e EnrichedISSPoint) GetISSLongitudeStr() string {
+	if e.ISSLongitude.Valid {
+		return fmt.Sprintf("%.4f°", e.ISSLongitude.Float64)
+	}
+	return "—"
 }
 
 // User — пользователь

@@ -1,5 +1,5 @@
 -- Миграция: создание таблиц для приложения «Видимость МКС»
--- 4 таблицы: users, observation_points (услуги), calculations (заявки), calculation_points (м-м)
+-- 4 таблицы: users, observation_points (услуги), iss_positions (заявки), iss_position_points (м-м)
 -- 5 статусов заявок: черновик, удалён, сформирован, завершён, отклонён
 
 -- Таблица пользователей
@@ -30,9 +30,9 @@ CREATE TABLE IF NOT EXISTS observation_points (
         CHECK (status IN ('active', 'deleted'))
 );
 
--- Таблица заявок (расчёты видимости МКС)
+-- Таблица заявок (определение положения МКС)
 -- Статусы: draft (черновик), deleted (удалён), formed (сформирован), completed (завершён), rejected (отклонён)
-CREATE TABLE IF NOT EXISTS calculations (
+CREATE TABLE IF NOT EXISTS iss_positions (
     id SERIAL PRIMARY KEY,
     status VARCHAR(20) NOT NULL DEFAULT 'draft'
         CHECK (status IN ('draft', 'deleted', 'formed', 'completed', 'rejected')),
@@ -46,23 +46,25 @@ CREATE TABLE IF NOT EXISTS calculations (
 );
 
 -- Таблица м-м: точки наблюдения в заявке
--- Составной уникальный ключ (calculation_id, point_id)
-CREATE TABLE IF NOT EXISTS calculation_points (
+-- Составной уникальный ключ (iss_position_id, point_id)
+-- Положение МКС — 2 отдельных поля координат (широта и долгота)
+CREATE TABLE IF NOT EXISTS iss_position_points (
     id SERIAL PRIMARY KEY,
-    calculation_id INTEGER NOT NULL REFERENCES calculations(id),
+    iss_position_id INTEGER NOT NULL REFERENCES iss_positions(id),
     point_id INTEGER NOT NULL REFERENCES observation_points(id),
     observation_order INTEGER NOT NULL DEFAULT 1,
     is_primary BOOLEAN NOT NULL DEFAULT FALSE,
     observer_name VARCHAR(255),
-    position_result VARCHAR(500),
-    UNIQUE (calculation_id, point_id)
+    iss_latitude DOUBLE PRECISION,
+    iss_longitude DOUBLE PRECISION,
+    UNIQUE (iss_position_id, point_id)
 );
 
 -- Индексы
-CREATE INDEX IF NOT EXISTS idx_calculations_status ON calculations(status);
-CREATE INDEX IF NOT EXISTS idx_calculations_creator ON calculations(creator_id);
-CREATE INDEX IF NOT EXISTS idx_calc_points_calc ON calculation_points(calculation_id);
-CREATE INDEX IF NOT EXISTS idx_calc_points_point ON calculation_points(point_id);
+CREATE INDEX IF NOT EXISTS idx_iss_positions_status ON iss_positions(status);
+CREATE INDEX IF NOT EXISTS idx_iss_positions_creator ON iss_positions(creator_id);
+CREATE INDEX IF NOT EXISTS idx_iss_pos_points_pos ON iss_position_points(iss_position_id);
+CREATE INDEX IF NOT EXISTS idx_iss_pos_points_point ON iss_position_points(point_id);
 CREATE INDEX IF NOT EXISTS idx_obs_points_status ON observation_points(status);
 
 -- ============================================================
@@ -135,14 +137,14 @@ INSERT INTO observation_points (name, country, latitude, longitude, elevation, t
 ON CONFLICT (name) DO NOTHING;
 
 -- Завершённая заявка (для демонстрации)
-INSERT INTO calculations (status, creator_id, created_at, formed_at, completed_at, moderator_id, observation_date, total_visibility) VALUES
+INSERT INTO iss_positions (status, creator_id, created_at, formed_at, completed_at, moderator_id, observation_date, total_visibility) VALUES
     ('completed', 1, '2026-03-10', '2026-03-12', '2026-03-14', 2, '2026-03-15',
      'МКС наблюдаема из 3 из 3 выбранных точек. Суммарное время видимости: 18 мин 12 сек. Оптимальная точка: Байконур (макс. высота 78°).')
 ON CONFLICT DO NOTHING;
 
--- М-М для завершённой заявки
-INSERT INTO calculation_points (calculation_id, point_id, observation_order, is_primary, observer_name, position_result) VALUES
-    (1, 1, 1, TRUE, 'Иванов Алексей Сергеевич', 'Высота 62°, азимут 215°, 19:42–19:48 МСК'),
-    (1, 2, 2, FALSE, 'Петрова Мария Ивановна', 'Высота 78°, азимут 187°, 20:15–20:21 +06'),
-    (1, 5, 3, FALSE, 'Сидоров Дмитрий Олегович', 'Высота 45°, азимут 302°, 02:05–02:10 +09')
+-- М-М для завершённой заявки (iss_latitude, iss_longitude — координаты МКС в момент наблюдения)
+INSERT INTO iss_position_points (iss_position_id, point_id, observation_order, is_primary, observer_name, iss_latitude, iss_longitude) VALUES
+    (1, 1, 1, TRUE, 'Иванов Алексей Сергеевич', 51.6340, 35.2100),
+    (1, 2, 2, FALSE, 'Петрова Мария Ивановна', 48.2750, 65.1400),
+    (1, 5, 3, FALSE, 'Сидоров Дмитрий Олегович', 52.1200, 130.4800)
 ON CONFLICT DO NOTHING;

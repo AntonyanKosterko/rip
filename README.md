@@ -16,18 +16,18 @@
 
 ```
 ├── main.go                      # HTTP-сервер, роутинг, контроллеры, ORM-запросы
-├── data.go                      # Модели данных (ObservationPoint, Calculation, CalculationPoint, User)
+├── data.go                      # Модели данных (ObservationPoint, ISSPosition, ISSPositionPoint, User)
 ├── go.mod / go.sum              # Go-модули (github.com/lib/pq)
 ├── migrations/
 │   └── 001_init.sql             # Миграция: 4 таблицы + начальные данные
 ├── templates/
-│   ├── base.html                # Базовый шаблон (хедер, поиск, корзина, футер)
+│   ├── base.html                # Базовый шаблон (хедер, подхедер с поиском и корзиной, футер)
 │   ├── services.html            # Список точек наблюдения (сетка карточек)
-│   ├── service_detail.html      # Детальная страница (vibes-стиль + кнопка «В заявку»)
-│   └── calculation.html         # Страница заявки (таблица точек + кнопка «Удалить»)
+│   ├── service_detail.html      # Детальная страница (vibes-стиль, видео на фоне + кнопка «В заявку»)
+│   └── iss_position.html        # Страница заявки (таблица точек + кнопка «Удалить»)
 ├── static/
 │   └── styles.css               # Тёмно-синяя тема (#001233), красные кнопки (#D32F2F)
-├── docker-compose.yml           # MinIO (S3) + Adminer
+├── docker-compose.yml           # Adminer
 └── README.md
 ```
 
@@ -39,38 +39,41 @@
 |---------|----------|
 | `users` | Пользователи (id, username UNIQUE, full_name, email) |
 | `observation_points` | Точки наблюдения МКС — услуги (id, name UNIQUE, country, lat, lon, elevation, timezone, ..., status) |
-| `calculations` | Заявки на расчёт видимости (id, status, creator_id FK, moderator_id FK, observation_date, total_visibility) |
-| `calculation_points` | М-М связь: точки в заявке (id, calculation_id FK, point_id FK, observation_order, is_primary, observer_name, position_result) |
+| `iss_positions` | Заявки на определение положения МКС (id, status, creator_id FK, moderator_id FK, observation_date, total_visibility) |
+| `iss_position_points` | М-М связь: точки в заявке (id, iss_position_id FK, point_id FK, observation_order, is_primary, observer_name, iss_latitude, iss_longitude) |
 
-**Составной уникальный ключ:** `UNIQUE (calculation_id, point_id)` — одна точка может быть в заявке только один раз.
+**Составной уникальный ключ:** `UNIQUE (iss_position_id, point_id)` — одна точка может быть в заявке только один раз.
 
 **5 статусов заявки:** `draft` (черновик), `deleted` (удалён), `formed` (сформирован), `completed` (завершён), `rejected` (отклонён).
 
-**Вычисляемое поле:** `total_visibility` в таблице `calculations` — результат расчёта видимости МКС, заполняется при завершении заявки.
+**Вычисляемое поле:** `total_visibility` в таблице `iss_positions` — результат расчёта видимости МКС, заполняется при завершении заявки.
+
+**Положение МКС:** `iss_latitude` и `iss_longitude` в таблице `iss_position_points` — координаты МКС в момент наблюдения (два отдельных поля DOUBLE PRECISION).
 
 ### 5 HTTP-методов
 
 | Метод | URL | Описание | Способ |
 |-------|-----|----------|--------|
 | GET | `/` | Список точек наблюдения + поиск | ORM |
-| GET | `/services/{id}/` | Детальная страница точки | ORM |
-| GET | `/calculations/{id}/` | Просмотр заявки | ORM |
+| GET | `/services/{id}/` | Детальная страница точки (vibes-стиль с видео) | ORM |
+| GET | `/iss-positions/{id}/` | Просмотр заявки | ORM |
 | POST | `/services/{id}/add/` | Добавить точку в заявку (создаёт черновик если нет) | ORM |
-| POST | `/calculations/{id}/delete/` | Логическое удаление заявки (статус → deleted) | **Raw SQL UPDATE** |
+| POST | `/iss-positions/{id}/delete/` | Логическое удаление заявки (статус → deleted) | **Raw SQL UPDATE** |
 
 ### Бизнес-логика
 
 - При отсутствии заявки в статусе `draft` — она создаётся автоматически при добавлении первой точки
 - Если черновик уже существует — точка добавляется в него
 - Удалённые заявки (`status = 'deleted'`) просматривать нельзя (HTTP 410 Gone)
-- Если у пользователя нет текущей заявки — иконка корзины неактивна (серая, некликабельная)
-- Удаление заявки выполняется через raw SQL `UPDATE calculations SET status = 'deleted'`, без ORM
+- Если у пользователя нет текущей заявки — иконка корзины (спутник) неактивна (серая, некликабельная)
+- Удаление заявки выполняется через raw SQL `UPDATE iss_positions SET status = 'deleted'`, без ORM
+- На детальной странице видео используется как фон vibes-карточки (вместо изображения), с иконками поверх
 
 ### Запуск
 
 ```bash
 # 1. Запустить PostgreSQL (порт 5433, user: root, password: root, db: RIP)
-# 2. Запустить MinIO + Adminer
+# 2. Запустить Adminer
 docker compose up -d
 
 # 3. Запустить сервер (миграция выполняется автоматически)
@@ -78,7 +81,6 @@ go run .
 
 # Приложение: http://localhost:8080
 # Adminer:    http://localhost:8081
-# MinIO:      http://localhost:9001
 ```
 
 ### Adminer

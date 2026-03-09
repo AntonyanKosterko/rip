@@ -27,34 +27,14 @@
                 </svg>
                 <span class="home-btn-text">Видимость МКС</span>
             </a>
-
-            {{if .ShowCart}}
-            <!-- Корзина-иконка (только на странице списка) -->
-            {{if .HasCart}}
-            <a href="/calculations/{{.CalcID}}/" class="cart-icon" title="Текущая заявка">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="9" cy="21" r="1"/>
-                    <circle cx="20" cy="21" r="1"/>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                </svg>
-                <span class="cart-badge">{{.CalcCount}}</span>
-            </a>
-            {{else}}
-            <span class="cart-icon cart-inactive" title="Нет активной заявки">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
-                    <circle cx="9" cy="21" r="1"/>
-                    <circle cx="20" cy="21" r="1"/>
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                </svg>
-                <span class="cart-badge cart-badge-empty">0</span>
-            </span>
-            {{end}}
-            {{end}}
         </div>
+    </header>
 
-        {{if .ShowSearch}}
-        <!-- Поиск под хедером -->
-        <div class="search-bar">
+    {{if .ShowSearch}}
+    <!-- Подхедер: поиск + корзина (под хедером, не внутри) -->
+    <div class="sub-header">
+        <div class="sub-header-content">
+            <!-- Поиск -->
             <form method="get" action="/" class="search-form">
                 <input type="text"
                        name="search"
@@ -68,9 +48,42 @@
                     </svg>
                 </button>
             </form>
+
+            {{if .ShowCart}}
+            <!-- Корзина-иконка (спутник/МКС) -->
+            {{if .HasCart}}
+            <a href="/iss-positions/{{.PosID}}/" class="cart-icon" title="Текущая заявка">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Спутник / МКС -->
+                    <circle cx="12" cy="12" r="3"/>
+                    <line x1="3" y1="12" x2="9" y2="12"/>
+                    <line x1="15" y1="12" x2="21" y2="12"/>
+                    <rect x="1" y="10" width="4" height="4" rx="0.5"/>
+                    <rect x="19" y="10" width="4" height="4" rx="0.5"/>
+                    <line x1="12" y1="9" x2="12" y2="5"/>
+                    <circle cx="12" cy="4" r="1"/>
+                </svg>
+                <span class="cart-badge">{{.PosCount}}</span>
+            </a>
+            {{else}}
+            <span class="cart-icon cart-inactive" title="Нет активной заявки">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
+                    <!-- Спутник / МКС (неактивная) -->
+                    <circle cx="12" cy="12" r="3"/>
+                    <line x1="3" y1="12" x2="9" y2="12"/>
+                    <line x1="15" y1="12" x2="21" y2="12"/>
+                    <rect x="1" y="10" width="4" height="4" rx="0.5"/>
+                    <rect x="19" y="10" width="4" height="4" rx="0.5"/>
+                    <line x1="12" y1="9" x2="12" y2="5"/>
+                    <circle cx="12" cy="4" r="1"/>
+                </svg>
+                <span class="cart-badge cart-badge-empty">0</span>
+            </span>
+            {{end}}
+            {{end}}
         </div>
-        {{end}}
-    </header>
+    </div>
+    {{end}}
 
     <main class="content">
         {{template "content" .}}

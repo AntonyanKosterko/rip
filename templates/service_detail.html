@@ -2,12 +2,18 @@
 
 {{define "content"}}
 <!-- Детальная страница услуги id={{.Service.ID}} -->
-<!-- Vibes-стиль: портретная карточка, текст поверх изображения -->
+<!-- Vibes-стиль: портретная карточка, видео/изображение на фоне, иконки поверх -->
 <div class="detail-page vibes-layout">
 
-    <!-- Vibes-карточка: полноэкранное изображение с текстом поверх -->
+    <!-- Vibes-карточка: полноэкранное видео (или изображение) с текстом поверх -->
     <div class="vibes-card">
-        <img src="{{.Service.GetImageURL}}" alt="{{.Service.Name}}" class="vibes-image">
+        {{if .Service.GetVideoURL}}
+        <video autoplay muted loop playsinline class="vibes-media">
+            <source src="{{.Service.GetVideoURL}}" type="video/mp4">
+        </video>
+        {{else}}
+        <img src="{{.Service.GetImageURL}}" alt="{{.Service.Name}}" class="vibes-media">
+        {{end}}
         <div class="vibes-overlay"></div>
         <div class="vibes-content">
             <span class="vibes-label">Точка наблюдения</span>
@@ -53,29 +59,21 @@
             <!-- Кнопка: добавить в заявку (POST) -->
             <form method="post" action="/services/{{.Service.ID}}/add/" class="vibes-add-form">
                 <button type="submit" class="vibes-action vibes-add-btn" title="Добавить в заявку">
+                    <!-- Спутник / МКС иконка -->
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="9" cy="21" r="1"/>
-                        <circle cx="20" cy="21" r="1"/>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        <line x1="3" y1="12" x2="9" y2="12"/>
+                        <line x1="15" y1="12" x2="21" y2="12"/>
+                        <rect x="1" y="10" width="4" height="4" rx="0.5"/>
+                        <rect x="19" y="10" width="4" height="4" rx="0.5"/>
+                        <line x1="12" y1="9" x2="12" y2="5"/>
+                        <circle cx="12" cy="4" r="1"/>
                     </svg>
                     <span>В заявку</span>
                 </button>
             </form>
         </div>
     </div>
-
-    <!-- Видео (автовоспроизведение) -->
-    {{if .Service.GetVideoURL}}
-    <div class="detail-video-section">
-        <h2 class="detail-section-title">Обзор локации</h2>
-        <div class="video-wrapper">
-            <video autoplay muted loop playsinline class="detail-video">
-                <source src="{{.Service.GetVideoURL}}" type="video/mp4">
-                Ваш браузер не поддерживает воспроизведение видео.
-            </video>
-        </div>
-    </div>
-    {{end}}
 
     <!-- Информационная сетка -->
     <div class="detail-info-section">

@@ -47,7 +47,6 @@ img {
 /* --- Header --- */
 .main-header {
     background-color: #000B1D;
-    border-bottom: 1px solid #1A3A5C;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -81,7 +80,26 @@ img {
     letter-spacing: 0.5px;
 }
 
-/* --- Cart Icon (только на стр.1, под хедером справа) --- */
+/* --- Sub-header (поиск + корзина — под хедером) --- */
+.sub-header {
+    background: #001233;
+    padding: 8px 0;
+}
+
+.sub-header-content {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.sub-header-content .search-form {
+    flex: 1;
+}
+
+/* --- Cart Icon (спутник/МКС — тематическая иконка) --- */
 .cart-icon {
     position: relative;
     display: flex;
@@ -91,6 +109,7 @@ img {
     height: 44px;
     color: #FFFFFF;
     transition: color 0.2s;
+    flex-shrink: 0;
 }
 
 .cart-icon:hover {
@@ -114,16 +133,8 @@ img {
     line-height: 1;
 }
 
-/* --- Search Bar (под хедером) --- */
-.search-bar {
-    background: #000B1D;
-    border-bottom: 1px solid #1A3A5C;
-    padding: 8px 24px;
-}
-
+/* --- Search Bar --- */
 .search-form {
-    max-width: 1280px;
-    margin: 0 auto;
     display: flex;
     gap: 8px;
 }
@@ -325,8 +336,8 @@ img {
 /* ============================================================
    Страница 2: Vibes-стиль (портретная карточка)
    Вдохновлено скрином TikTok/ВК Клипы:
-   - Полноэкранное изображение
-   - Текст поверх изображения снизу
+   - Полноэкранное видео (или изображение как фоллбэк)
+   - Текст поверх видео снизу
    - Боковые иконки действий справа
    ============================================================ */
 
@@ -346,6 +357,15 @@ img {
     background: #000;
 }
 
+/* Общий класс для видео и изображения в vibes-карточке */
+.vibes-media {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Обратная совместимость — старый класс */
 .vibes-image {
     width: 100%;
     height: 100%;
@@ -362,6 +382,7 @@ img {
         transparent 60%,
         rgba(0, 11, 29, 0.3) 100%
     );
+    pointer-events: none;
 }
 
 .vibes-content {
@@ -446,7 +467,6 @@ img {
     padding-bottom: 32px;
 }
 
-.detail-video-section,
 .detail-info-section,
 .detail-description-section {
     max-width: 800px;
@@ -461,17 +481,6 @@ img {
     margin-bottom: 16px;
     border-left: 4px solid #D32F2F;
     padding-left: 12px;
-}
-
-.video-wrapper {
-    border: 1px solid #1A3A5C;
-    overflow: hidden;
-    background: #000;
-}
-
-.detail-video {
-    width: 100%;
-    display: block;
 }
 
 .info-grid {
@@ -521,7 +530,7 @@ img {
 }
 
 /* ============================================================
-   Страница 3: Расчёт (бывшая «Заявка»)
+   Страница 3: ISS Position (заявка)
    Услуги — карточки как таблица с заголовком
    ============================================================ */
 
@@ -531,6 +540,7 @@ img {
 
 .calc-page-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 16px;
     margin-bottom: 24px;
@@ -553,14 +563,12 @@ img {
 
 .status-badge {
     display: inline-block;
-    background: #1B5E20;
-    color: #FFFFFF;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 12px;
+    padding: 4px 14px;
+    border-radius: 2px;
+    font-size: 0.85rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-radius: 0;
 }
 
 /* Поля расчёта */
@@ -631,10 +639,10 @@ img {
     padding-left: 12px;
 }
 
-/* Заголовок таблицы — отдельная карточка */
+/* Заголовок таблицы — 8 колонок (добавлены широта и долгота МКС) */
 .calc-table-header {
     display: grid;
-    grid-template-columns: 64px 1.5fr 1fr 50px 80px 1.5fr 1.5fr;
+    grid-template-columns: 64px 1.5fr 1fr 50px 80px 1.5fr 1fr 1fr;
     gap: 12px;
     padding: 12px 16px;
     background: #0348A3;
@@ -651,10 +659,10 @@ img {
     letter-spacing: 0.5px;
 }
 
-/* Карточки-строки */
+/* Карточки-строки — 8 колонок */
 .calc-service-card {
     display: grid;
-    grid-template-columns: 64px 1.5fr 1fr 50px 80px 1.5fr 1.5fr;
+    grid-template-columns: 64px 1.5fr 1fr 50px 80px 1.5fr 1fr 1fr;
     gap: 12px;
     padding: 12px 16px;
     background: #0A1929;
@@ -826,6 +834,14 @@ img {
         max-height: none;
         min-height: 500px;
     }
+
+    .sub-header-content {
+        flex-wrap: wrap;
+    }
+
+    .sub-header-content .search-form {
+        min-width: 0;
+    }
 }
 
 /* ============================================================
@@ -871,16 +887,6 @@ img {
 }
 
 /* --- Статус-бейджи --- */
-.status-badge {
-    display: inline-block;
-    padding: 4px 14px;
-    border-radius: 2px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
 .status-draft {
     background-color: #1565C0;
     color: #FFFFFF;
@@ -907,14 +913,6 @@ img {
 }
 
 /* --- Кнопка «Удалить заявку» --- */
-.calc-page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
 .calc-header-right {
     display: flex;
     align-items: center;

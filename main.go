@@ -44,17 +44,17 @@ func main() {
 		template.ParseFiles("templates/base.html", "templates/services.html"))
 	templates["service_detail"] = template.Must(
 		template.ParseFiles("templates/base.html", "templates/service_detail.html"))
-	templates["calculation"] = template.Must(
-		template.ParseFiles("templates/base.html", "templates/calculation.html"))
+	templates["iss_position"] = template.Must(
+		template.ParseFiles("templates/base.html", "templates/iss_position.html"))
 
 	// Статика
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// Маршруты: 3 GET + 2 POST = 5 HTTP методов
-	http.HandleFunc("/", servicesListHandler)             // GET: список услуг
-	http.HandleFunc("/services/", servicesRouter)         // GET: детальная + POST: добавить в заявку
-	http.HandleFunc("/calculations/", calculationsRouter) // GET: просмотр заявки + POST: удалить заявку
+	http.HandleFunc("/", servicesListHandler)              // GET: список услуг
+	http.HandleFunc("/services/", servicesRouter)          // GET: детальная + POST: добавить в заявку
+	http.HandleFunc("/iss-positions/", issPositionsRouter) // GET: просмотр заявки + POST: удалить заявку
 
 	fmt.Println("Сервер запущен на http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -136,13 +136,13 @@ func getPointByID(id int) (*ObservationPoint, error) {
 	return p, nil
 }
 
-// getDraftCalculation — получить черновик заявки пользователя (ORM)
-func getDraftCalculation(userID int) (*Calculation, error) {
-	c := &Calculation{}
+// getDraftISSPosition — получить черновик заявки пользователя (ORM)
+func getDraftISSPosition(userID int) (*ISSPosition, error) {
+	c := &ISSPosition{}
 	err := db.QueryRow(
 		`SELECT id, status, created_at, creator_id, formed_at, completed_at,
 		 moderator_id, observation_date, total_visibility
-		 FROM calculations WHERE creator_id = $1 AND status = 'draft'`, userID,
+		 FROM iss_positions WHERE creator_id = $1 AND status = 'draft'`, userID,
 	).Scan(&c.ID, &c.Status, &c.CreatedAt, &c.CreatorID, &c.FormedAt,
 		&c.CompletedAt, &c.ModeratorID, &c.ObservationDate, &c.TotalVisibility)
 	if err != nil {
@@ -151,13 +151,13 @@ func getDraftCalculation(userID int) (*Calculation, error) {
 	return c, nil
 }
 
-// getCalculationByID — получить заявку по ID (ORM)
-func getCalculationByID(id int) (*Calculation, error) {
-	c := &Calculation{}
+// getISSPositionByID — получить заявку по ID (ORM)
+func getISSPositionByID(id int) (*ISSPosition, error) {
+	c := &ISSPosition{}
 	err := db.QueryRow(
 		`SELECT id, status, created_at, creator_id, formed_at, completed_at,
 		 moderator_id, observation_date, total_visibility
-		 FROM calculations WHERE id = $1`, id,
+		 FROM iss_positions WHERE id = $1`, id,
 	).Scan(&c.ID, &c.Status, &c.CreatedAt, &c.CreatorID, &c.FormedAt,
 		&c.CompletedAt, &c.ModeratorID, &c.ObservationDate, &c.TotalVisibility)
 	if err != nil {
@@ -166,89 +166,88 @@ func getCalculationByID(id int) (*Calculation, error) {
 	return c, nil
 }
 
-// getCalcPointsCount — количество точек в заявке (ORM)
-func getCalcPointsCount(calcID int) int {
+// getISSPositionPointsCount — количество точек в заявке (ORM)
+func getISSPositionPointsCount(posID int) int {
 	var count int
-	db.QueryRow(`SELECT COUNT(*) FROM calculation_points WHERE calculation_id = $1`, calcID).Scan(&count)
+	db.QueryRow(`SELECT COUNT(*) FROM iss_position_points WHERE iss_position_id = $1`, posID).Scan(&count)
 	return count
 }
 
-// getCalcPoints — получить точки в заявке с полными данными (ORM)
-func getCalcPoints(calcID int) ([]EnrichedCalcPoint, error) {
+// getISSPositionPoints — получить точки в заявке с полными данными (ORM)
+func getISSPositionPoints(posID int) ([]EnrichedISSPoint, error) {
 	rows, err := db.Query(
 		`SELECT op.id, op.name, op.country, op.latitude, op.longitude, op.elevation,
 		 op.timezone, op.best_time, op.light_pollution, op.weather_conditions,
 		 op.description, op.image_url, op.video_url, op.status,
-		 cp.observation_order, cp.is_primary, cp.observer_name, cp.position_result
-		 FROM calculation_points cp
-		 JOIN observation_points op ON op.id = cp.point_id
-		 WHERE cp.calculation_id = $1
-		 ORDER BY cp.observation_order`, calcID)
+		 ipp.observation_order, ipp.is_primary, ipp.observer_name,
+		 ipp.iss_latitude, ipp.iss_longitude
+		 FROM iss_position_points ipp
+		 JOIN observation_points op ON op.id = ipp.point_id
+		 WHERE ipp.iss_position_id = $1
+		 ORDER BY ipp.observation_order`, posID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var result []EnrichedCalcPoint
+	var result []EnrichedISSPoint
 	for rows.Next() {
-		var ep EnrichedCalcPoint
-		var obsName, posResult sql.NullString
+		var ep EnrichedISSPoint
+		var obsName sql.NullString
 		if err := rows.Scan(&ep.ID, &ep.Name, &ep.Country, &ep.Latitude, &ep.Longitude,
 			&ep.Elevation, &ep.Timezone, &ep.BestTime, &ep.LightPollution,
 			&ep.WeatherConditions, &ep.Description, &ep.ImageURL, &ep.VideoURL, &ep.Status,
-			&ep.ObservationOrder, &ep.IsPrimary, &obsName, &posResult); err != nil {
+			&ep.ObservationOrder, &ep.IsPrimary, &obsName,
+			&ep.ISSLatitude, &ep.ISSLongitude); err != nil {
 			return nil, err
 		}
 		if obsName.Valid {
 			ep.ObserverName = obsName.String
-		}
-		if posResult.Valid {
-			ep.PositionResult = posResult.String
 		}
 		result = append(result, ep)
 	}
 	return result, nil
 }
 
-// addPointToCalculation — добавить точку в заявку (ORM)
+// addPointToISSPosition — добавить точку в заявку (ORM)
 // Если черновика нет — создаёт новую заявку
-func addPointToCalculation(userID, pointID int) error {
+func addPointToISSPosition(userID, pointID int) error {
 	// Получить или создать черновик
-	calc, err := getDraftCalculation(userID)
+	pos, err := getDraftISSPosition(userID)
 	if err == sql.ErrNoRows {
 		// Создать новую заявку-черновик
 		var newID int
 		err = db.QueryRow(
-			`INSERT INTO calculations (status, creator_id) VALUES ('draft', $1) RETURNING id`,
+			`INSERT INTO iss_positions (status, creator_id) VALUES ('draft', $1) RETURNING id`,
 			userID,
 		).Scan(&newID)
 		if err != nil {
 			return fmt.Errorf("ошибка создания заявки: %w", err)
 		}
-		calc = &Calculation{ID: newID}
+		pos = &ISSPosition{ID: newID}
 	} else if err != nil {
 		return err
 	}
 
 	// Определить следующий порядок
 	var maxOrder int
-	db.QueryRow(`SELECT COALESCE(MAX(observation_order), 0) FROM calculation_points WHERE calculation_id = $1`,
-		calc.ID).Scan(&maxOrder)
+	db.QueryRow(`SELECT COALESCE(MAX(observation_order), 0) FROM iss_position_points WHERE iss_position_id = $1`,
+		pos.ID).Scan(&maxOrder)
 
 	// Добавить точку (INSERT с ON CONFLICT — составной уникальный ключ)
 	_, err = db.Exec(
-		`INSERT INTO calculation_points (calculation_id, point_id, observation_order)
+		`INSERT INTO iss_position_points (iss_position_id, point_id, observation_order)
 		 VALUES ($1, $2, $3)
-		 ON CONFLICT (calculation_id, point_id) DO NOTHING`,
-		calc.ID, pointID, maxOrder+1)
+		 ON CONFLICT (iss_position_id, point_id) DO NOTHING`,
+		pos.ID, pointID, maxOrder+1)
 	return err
 }
 
-// deleteCalculationSQL — логическое удаление заявки через raw SQL UPDATE (без ORM)
-func deleteCalculationSQL(calcID int) error {
+// deleteISSPositionSQL — логическое удаление заявки через raw SQL UPDATE (без ORM)
+func deleteISSPositionSQL(posID int) error {
 	// Используем raw SQL, как требуется в задании (без ORM)
 	result, err := db.Exec(
-		`UPDATE calculations SET status = 'deleted' WHERE id = $1 AND status = 'draft'`, calcID)
+		`UPDATE iss_positions SET status = 'deleted' WHERE id = $1 AND status = 'draft'`, posID)
 	if err != nil {
 		return err
 	}
@@ -280,20 +279,20 @@ func servicesListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Текущая заявка-черновик (корзина)
-	draft, _ := getDraftCalculation(defaultUserID)
-	var calcID, calcCount int
+	draft, _ := getDraftISSPosition(defaultUserID)
+	var posID, posCount int
 	var hasCart bool
 	if draft != nil {
-		calcID = draft.ID
-		calcCount = getCalcPointsCount(draft.ID)
+		posID = draft.ID
+		posCount = getISSPositionPointsCount(draft.ID)
 		hasCart = true
 	}
 
 	data := map[string]interface{}{
 		"Services":    points,
 		"SearchQuery": searchQuery,
-		"CalcID":      calcID,
-		"CalcCount":   calcCount,
+		"PosID":       posID,
+		"PosCount":    posCount,
 		"HasCart":     hasCart,
 		"ShowCart":    true,
 		"ShowSearch":  true,
@@ -322,7 +321,7 @@ func servicesRouter(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		addToCalculationHandler(w, r, id)
+		addToISSPositionHandler(w, r, id)
 		return
 	}
 
@@ -343,17 +342,17 @@ func serviceDetailHandler(w http.ResponseWriter, r *http.Request, pointID int) {
 		return
 	}
 
-	draft, _ := getDraftCalculation(defaultUserID)
-	var calcID, calcCount int
+	draft, _ := getDraftISSPosition(defaultUserID)
+	var posID, posCount int
 	if draft != nil {
-		calcID = draft.ID
-		calcCount = getCalcPointsCount(draft.ID)
+		posID = draft.ID
+		posCount = getISSPositionPointsCount(draft.ID)
 	}
 
 	data := map[string]interface{}{
 		"Service":    point,
-		"CalcID":     calcID,
-		"CalcCount":  calcCount,
+		"PosID":      posID,
+		"PosCount":   posCount,
 		"ShowCart":   false,
 		"ShowSearch": false,
 	}
@@ -363,9 +362,9 @@ func serviceDetailHandler(w http.ResponseWriter, r *http.Request, pointID int) {
 	}
 }
 
-// addToCalculationHandler — POST /services/<id>/add/: добавить услугу в заявку (ORM)
-func addToCalculationHandler(w http.ResponseWriter, r *http.Request, pointID int) {
-	if err := addPointToCalculation(defaultUserID, pointID); err != nil {
+// addToISSPositionHandler — POST /services/<id>/add/: добавить услугу в заявку (ORM)
+func addToISSPositionHandler(w http.ResponseWriter, r *http.Request, pointID int) {
+	if err := addPointToISSPosition(defaultUserID, pointID); err != nil {
 		http.Error(w, "Ошибка добавления: "+err.Error(), 500)
 		return
 	}
@@ -373,48 +372,48 @@ func addToCalculationHandler(w http.ResponseWriter, r *http.Request, pointID int
 	http.Redirect(w, r, fmt.Sprintf("/services/%d/", pointID), http.StatusSeeOther)
 }
 
-// calculationsRouter — роутер /calculations/<id>/
-func calculationsRouter(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/calculations/")
+// issPositionsRouter — роутер /iss-positions/<id>/
+func issPositionsRouter(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/iss-positions/")
 	path = strings.TrimSuffix(path, "/")
 
 	parts := strings.Split(path, "/")
 
-	// POST /calculations/<id>/delete/ — удаление заявки через SQL
+	// POST /iss-positions/<id>/delete/ — удаление заявки через SQL
 	if len(parts) == 2 && parts[1] == "delete" && r.Method == http.MethodPost {
 		id, err := strconv.Atoi(parts[0])
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
-		deleteCalculationHandler(w, r, id)
+		deleteISSPositionHandler(w, r, id)
 		return
 	}
 
-	// GET /calculations/<id>/ — просмотр заявки
+	// GET /iss-positions/<id>/ — просмотр заявки
 	id, err := strconv.Atoi(parts[0])
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	calculationDetailHandler(w, r, id)
+	issPositionDetailHandler(w, r, id)
 }
 
-// calculationDetailHandler — GET /calculations/<id>/: просмотр заявки (ORM)
-func calculationDetailHandler(w http.ResponseWriter, r *http.Request, calcID int) {
-	calc, err := getCalculationByID(calcID)
+// issPositionDetailHandler — GET /iss-positions/<id>/: просмотр заявки (ORM)
+func issPositionDetailHandler(w http.ResponseWriter, r *http.Request, posID int) {
+	pos, err := getISSPositionByID(posID)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 
 	// Удалённые заявки просматривать нельзя
-	if calc.Status == "deleted" {
+	if pos.Status == "deleted" {
 		http.Error(w, "Заявка удалена", http.StatusGone)
 		return
 	}
 
-	calcPoints, err := getCalcPoints(calcID)
+	posPoints, err := getISSPositionPoints(posID)
 	if err != nil {
 		http.Error(w, "Ошибка получения данных: "+err.Error(), 500)
 		return
@@ -422,31 +421,31 @@ func calculationDetailHandler(w http.ResponseWriter, r *http.Request, calcID int
 
 	// Получить имя создателя
 	var creatorName string
-	db.QueryRow(`SELECT full_name FROM users WHERE id = $1`, calc.CreatorID).Scan(&creatorName)
+	db.QueryRow(`SELECT full_name FROM users WHERE id = $1`, pos.CreatorID).Scan(&creatorName)
 
 	var moderatorName string
-	if calc.ModeratorID.Valid {
-		db.QueryRow(`SELECT full_name FROM users WHERE id = $1`, calc.ModeratorID.Int64).Scan(&moderatorName)
+	if pos.ModeratorID.Valid {
+		db.QueryRow(`SELECT full_name FROM users WHERE id = $1`, pos.ModeratorID.Int64).Scan(&moderatorName)
 	}
 
 	data := map[string]interface{}{
-		"Calculation":   calc,
-		"CalcServices":  calcPoints,
+		"ISSPosition":   pos,
+		"PosServices":   posPoints,
 		"CreatorName":   creatorName,
 		"ModeratorName": moderatorName,
-		"IsDraft":       calc.Status == "draft",
+		"IsDraft":       pos.Status == "draft",
 		"ShowCart":      false,
 		"ShowSearch":    false,
 	}
 
-	if err := templates["calculation"].ExecuteTemplate(w, "base", data); err != nil {
+	if err := templates["iss_position"].ExecuteTemplate(w, "base", data); err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 }
 
-// deleteCalculationHandler — POST /calculations/<id>/delete/: логическое удаление через SQL UPDATE
-func deleteCalculationHandler(w http.ResponseWriter, r *http.Request, calcID int) {
-	if err := deleteCalculationSQL(calcID); err != nil {
+// deleteISSPositionHandler — POST /iss-positions/<id>/delete/: логическое удаление через SQL UPDATE
+func deleteISSPositionHandler(w http.ResponseWriter, r *http.Request, posID int) {
+	if err := deleteISSPositionSQL(posID); err != nil {
 		http.Error(w, "Ошибка удаления: "+err.Error(), 400)
 		return
 	}
