@@ -51,7 +51,10 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// Маршруты: 3 GET + 2 POST = 5 HTTP методов
+	// API-маршруты (REST для SPA)
+	registerAPIHandlers()
+
+	// Маршруты HTML-интерфейса (лаба 1/2): 3 GET + 2 POST = 5 HTTP методов
 	http.HandleFunc("/", servicesListHandler)              // GET: список услуг
 	http.HandleFunc("/services/", servicesRouter)          // GET: детальная + POST: добавить в заявку
 	http.HandleFunc("/iss-positions/", issPositionsRouter) // GET: просмотр заявки + POST: удалить заявку
