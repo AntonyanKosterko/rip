@@ -177,61 +177,91 @@ func serviceToResponse(p ObservationPoint) ServiceResponse {
 // DTO: заявки и m-m
 // ============================================================
 
-type CartInfoResponse struct {
+// ISSDraftInfoResponse — текущий черновик заявки на фиксацию положения МКС (id и число точек наблюдения)
+type ISSDraftInfoResponse struct {
 	ID    *int `json:"id"`
 	Count int  `json:"count"`
 }
 
 type ISSPositionListItem struct {
-	ID             int       `json:"id"`
-	Status         string    `json:"status"`
-	CreatedAt      time.Time `json:"created_at"`
-	FormedAt       *time.Time `json:"formed_at,omitempty"`
-	CompletedAt    *time.Time `json:"completed_at,omitempty"`
+	ID       int    `json:"id"`
+	Status   string `json:"status"`
+	StatusRu string `json:"status_ru"`
+	// ThemeRu — тема проекта (лаба): определение положения МКС
+	ThemeRu string `json:"theme_ru"`
+	// ObservationPointsCount — всего точек наблюдения в заявке
+	ObservationPointsCount int `json:"observation_points_count"`
+	// ISSPositionDeterminationResultsCount — число точек, где зафиксировано положение МКС (iss_latitude + iss_longitude); результат по теме заявки
+	ISSPositionDeterminationResultsCount int `json:"iss_position_determination_results_count"`
+
+	CreatedAt       time.Time  `json:"created_at"`
+	FormedAt        *time.Time `json:"formed_at,omitempty"`
+	CompletedAt     *time.Time `json:"completed_at,omitempty"`
 	ObservationDate *time.Time `json:"observation_date,omitempty"`
-	TotalVisibility string    `json:"total_visibility,omitempty"`
-	CreatorLogin    string    `json:"creator_login"`
-	ModeratorLogin  string    `json:"moderator_login,omitempty"`
-	ResultCount     int       `json:"result_count"`
+	// TotalVisibility — текст результата расчёта видимости/заявки (всегда в JSON, может быть "")
+	TotalVisibility string `json:"total_visibility"`
+	CreatorLogin    string `json:"creator_login"`
+	ModeratorLogin  string `json:"moderator_login,omitempty"`
 }
 
 type ISSPositionPointResponse struct {
-	PointID          int     `json:"point_id"`
-	Name             string  `json:"name"`
-	Country          string  `json:"country"`
-	Latitude         float64 `json:"latitude"`
-	Longitude        float64 `json:"longitude"`
-	Elevation        int     `json:"elevation"`
-	Timezone         string  `json:"timezone"`
-	ImageURL         string  `json:"image_url,omitempty"`
-	VideoURL         string  `json:"video_url,omitempty"`
-	ObservationOrder int     `json:"observation_order"`
-	IsPrimary        bool    `json:"is_primary"`
-	ObserverName     string  `json:"observer_name,omitempty"`
+	PointID int    `json:"point_id"`
+	Name    string `json:"name"`
+	Country string `json:"country"`
+	// Координаты точки на Земле
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Elevation int     `json:"elevation"`
+	Timezone  string  `json:"timezone"`
+	// Карточка услуги (как в каталоге) — без omitempty, чтобы ссылки и поля были видны в JSON
+	BestTime          string `json:"best_time"`
+	LightPollution    string `json:"light_pollution"`
+	WeatherConditions string `json:"weather_conditions"`
+	Description       string `json:"description"`
+	ImageURL          string `json:"image_url"`
+	VideoURL          string `json:"video_url"`
+
+	ObservationOrder int    `json:"observation_order"`
+	IsPrimary        bool   `json:"is_primary"`
+	ObserverName     string `json:"observer_name"`
 	ISSLatitude      *float64 `json:"iss_latitude,omitempty"`
 	ISSLongitude     *float64 `json:"iss_longitude,omitempty"`
 }
 
 type ISSPositionDetailResponse struct {
-	ID              int                        `json:"id"`
-	Status          string                     `json:"status"`
-	CreatedAt       time.Time                  `json:"created_at"`
-	CreatorID       int                        `json:"creator_id"`
-	FormedAt        *time.Time                 `json:"formed_at,omitempty"`
-	CompletedAt     *time.Time                 `json:"completed_at,omitempty"`
-	ModeratorID     *int                       `json:"moderator_id,omitempty"`
-	ObservationDate *time.Time                 `json:"observation_date,omitempty"`
-	TotalVisibility string                     `json:"total_visibility,omitempty"`
-	CreatorName     string                     `json:"creator_name"`
-	ModeratorName   string                     `json:"moderator_name,omitempty"`
-	Points          []ISSPositionPointResponse `json:"points"`
+	ID       int    `json:"id"`
+	Status   string `json:"status"`
+	StatusRu string `json:"status_ru"`
+	// ThemeRu — тема: определение положения МКС с точек наблюдения
+	ThemeRu string `json:"theme_ru"`
+
+	CreatedAt   time.Time `json:"created_at"`
+	CreatorID   int       `json:"creator_id"`
+	CreatorName string    `json:"creator_name"`
+
+	FormedAt        *time.Time `json:"formed_at,omitempty"`
+	CompletedAt     *time.Time `json:"completed_at,omitempty"`
+	ModeratorID     *int       `json:"moderator_id,omitempty"`
+	ModeratorName   string     `json:"moderator_name,omitempty"`
+	ObservationDate *time.Time `json:"observation_date,omitempty"`
+
+	// TotalVisibility — результат расчёта / итоговый текст заявки (всегда ключ в JSON)
+	TotalVisibility string `json:"total_visibility"`
+
+	// ObservationPointsCount — число точек в заявке
+	ObservationPointsCount int `json:"observation_points_count"`
+	// ISSPositionDeterminationResultsCount — сколько точек с зафиксированным положением МКС (по теме заявки)
+	ISSPositionDeterminationResultsCount int `json:"iss_position_determination_results_count"`
+
+	Points []ISSPositionPointResponse `json:"points"`
 }
 
 type ISSPositionUpdateRequest struct {
 	ObservationDate *string `json:"observation_date,omitempty"` // формат YYYY-MM-DD
 }
 
-type CartAddItemRequest struct {
+// ISSDraftAddPointRequest — добавить точку наблюдения в черновик заявки
+type ISSDraftAddPointRequest struct {
 	PointID int `json:"point_id"`
 }
 
@@ -266,32 +296,32 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
+// AuthResponse — лаба 3: без токена; «текущий пользователь» задаётся singleton GetCurrentUser()
 type AuthResponse struct {
-	Success bool   `json:"success"`
-	Token   string `json:"token,omitempty"`
+	Success bool `json:"success"`
 }
 
 // ============================================================
 // Регистрация API-маршрутов
 // ============================================================
 
-func registerAPIHandlers() {
+func registerAPIHandlers(mux *http.ServeMux) {
 	// Услуги
-	http.HandleFunc("/api/services", servicesAPIHandler)
-	http.HandleFunc("/api/services/", serviceByIDAPIHandler)
+	mux.HandleFunc("/api/services", servicesAPIHandler)
+	mux.HandleFunc("/api/services/", serviceByIDAPIHandler)
 
-	// Корзина и м-м
-	http.HandleFunc("/api/cart", cartInfoAPIHandler)
-	http.HandleFunc("/api/cart/items", cartItemsAPIHandler)
-	http.HandleFunc("/api/iss-positions/", issPositionsAPIRouter)
+	// Черновик заявки (МКС): точки наблюдения перед формированием заявки
+	mux.HandleFunc("/api/iss-draft/points", issDraftPointsAPIHandler)
+	mux.HandleFunc("/api/iss-draft", issDraftInfoAPIHandler)
+	mux.HandleFunc("/api/iss-positions/", issPositionsAPIRouter)
 
 	// Заявки (список)
-	http.HandleFunc("/api/iss-positions", issPositionsListAPIHandler)
+	mux.HandleFunc("/api/iss-positions", issPositionsListAPIHandler)
 
 	// Пользователи и аутентификация (заглушки)
-	http.HandleFunc("/api/users/register", registerUserAPIHandler)
-	http.HandleFunc("/api/auth/login", loginAPIHandler)
-	http.HandleFunc("/api/auth/logout", logoutAPIHandler)
+	mux.HandleFunc("/api/users/register", registerUserAPIHandler)
+	mux.HandleFunc("/api/auth/login", loginAPIHandler)
+	mux.HandleFunc("/api/auth/logout", logoutAPIHandler)
 }
 
 // ============================================================
@@ -475,17 +505,17 @@ func serviceByIDAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	point, err := getPointByID(id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "Услуга не найдена")
+		redirectHome(w, r)
 		return
 	}
 	writeJSON(w, http.StatusOK, serviceToResponse(*point))
 }
 
 // ============================================================
-// Хендлеры: корзина и м-м
+// Хендлеры: черновик заявки (МКС) и м-м
 // ============================================================
 
-func cartInfoAPIHandler(w http.ResponseWriter, r *http.Request) {
+func issDraftInfoAPIHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", "GET")
 		writeError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
@@ -495,25 +525,25 @@ func cartInfoAPIHandler(w http.ResponseWriter, r *http.Request) {
 	draft, err := getDraftISSPosition(user.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSON(w, http.StatusOK, CartInfoResponse{ID: nil, Count: 0})
+			writeJSON(w, http.StatusOK, ISSDraftInfoResponse{ID: nil, Count: 0})
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "Ошибка получения корзины: "+err.Error())
+		writeError(w, http.StatusInternalServerError, "Ошибка получения черновика заявки: "+err.Error())
 		return
 	}
 
 	count := getISSPositionPointsCount(draft.ID)
 	id := draft.ID
-	writeJSON(w, http.StatusOK, CartInfoResponse{ID: &id, Count: count})
+	writeJSON(w, http.StatusOK, ISSDraftInfoResponse{ID: &id, Count: count})
 }
 
-func cartItemsAPIHandler(w http.ResponseWriter, r *http.Request) {
+func issDraftPointsAPIHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		writeError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
 		return
 	}
-	var req CartAddItemRequest
+	var req ISSDraftAddPointRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "Некорректный JSON")
 		return
@@ -607,8 +637,15 @@ func issPositionsAPIRouter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		redirectHome(w, r)
+		return
+	}
 	writeError(w, http.StatusNotFound, "Маршрут не найден")
 }
+
+// themeRUISSProject — формулировка темы лабораторной для API (список и деталка заявок)
+const themeRUISSProject = "Определение положения МКС с точек наблюдения на Земле"
 
 // ============================================================
 // Хендлеры: заявки (список, деталка, изменения)
@@ -630,12 +667,18 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 	          ip.observation_date, ip.total_visibility,
 	          u1.username AS creator_login,
 	          COALESCE(u2.username, '') AS moderator_login,
-	          COALESCE(res.result_count, 0) AS result_count
+	          COALESCE(ptot.points_total, 0) AS observation_points_count,
+	          COALESCE(res.iss_coord_cnt, 0) AS iss_position_determination_results_count
 	          FROM iss_positions ip
 	          JOIN users u1 ON u1.id = ip.creator_id
 	          LEFT JOIN users u2 ON u2.id = ip.moderator_id
 	          LEFT JOIN (
-	              SELECT iss_position_id, COUNT(*) AS result_count
+	              SELECT iss_position_id, COUNT(*) AS points_total
+	              FROM iss_position_points
+	              GROUP BY iss_position_id
+	          ) ptot ON ptot.iss_position_id = ip.id
+	          LEFT JOIN (
+	              SELECT iss_position_id, COUNT(*) AS iss_coord_cnt
 	              FROM iss_position_points
 	              WHERE iss_latitude IS NOT NULL AND iss_longitude IS NOT NULL
 	              GROUP BY iss_position_id
@@ -675,11 +718,14 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 		var totalVis sql.NullString
 		if err := rows.Scan(
 			&it.ID, &it.Status, &it.CreatedAt, &formedAt, &completedAt, &obsDate, &totalVis,
-			&it.CreatorLogin, &it.ModeratorLogin, &it.ResultCount,
+			&it.CreatorLogin, &it.ModeratorLogin,
+			&it.ObservationPointsCount, &it.ISSPositionDeterminationResultsCount,
 		); err != nil {
 			writeError(w, http.StatusInternalServerError, "Ошибка чтения строки: "+err.Error())
 			return
 		}
+		it.StatusRu = ISSPosition{Status: it.Status}.StatusRu()
+		it.ThemeRu = themeRUISSProject
 		if formedAt.Valid {
 			t := formedAt.Time
 			it.FormedAt = &t
@@ -704,16 +750,16 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Некорректный id заявки")
+		redirectHome(w, r)
 		return
 	}
 	pos, err := getISSPositionByID(id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "Заявка не найдена")
+		redirectHome(w, r)
 		return
 	}
 	if pos.Status == "deleted" {
-		writeError(w, http.StatusGone, "Заявка удалена")
+		redirectHome(w, r)
 		return
 	}
 	points, err := getISSPositionPoints(id)
@@ -736,6 +782,8 @@ func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) 
 	resp := ISSPositionDetailResponse{
 		ID:          pos.ID,
 		Status:      pos.Status,
+		StatusRu:    pos.StatusRu(),
+		ThemeRu:     themeRUISSProject,
 		CreatedAt:   pos.CreatedAt,
 		CreatorID:   pos.CreatorID,
 		ModeratorID: moderatorID,
@@ -759,6 +807,13 @@ func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) 
 		resp.TotalVisibility = pos.TotalVisibility.String
 	}
 
+	resp.ObservationPointsCount = len(points)
+	for _, p := range points {
+		if p.ISSLatitude.Valid && p.ISSLongitude.Valid {
+			resp.ISSPositionDeterminationResultsCount++
+		}
+	}
+
 	for _, p := range points {
 		var issLat, issLon *float64
 		if p.ISSLatitude.Valid {
@@ -770,20 +825,24 @@ func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) 
 			issLon = &v
 		}
 		resp.Points = append(resp.Points, ISSPositionPointResponse{
-			PointID:          p.ID,
-			Name:             p.Name,
-			Country:          p.Country,
-			Latitude:         p.Latitude,
-			Longitude:        p.Longitude,
-			Elevation:        p.Elevation,
-			Timezone:         p.Timezone,
-			ImageURL:         p.GetImageURL(),
-			VideoURL:         p.GetVideoURL(),
+			PointID:           p.ID,
+			Name:              p.Name,
+			Country:           p.Country,
+			Latitude:          p.Latitude,
+			Longitude:         p.Longitude,
+			Elevation:         p.Elevation,
+			Timezone:          p.Timezone,
+			BestTime:          p.GetBestTime(),
+			LightPollution:    p.GetLightPollution(),
+			WeatherConditions: p.GetWeatherConditions(),
+			Description:       p.GetDescription(),
+			ImageURL:          p.GetImageURL(),
+			VideoURL:          p.GetVideoURL(),
 			ObservationOrder: p.ObservationOrder,
-			IsPrimary:        p.IsPrimary,
-			ObserverName:     p.ObserverName,
-			ISSLatitude:      issLat,
-			ISSLongitude:     issLon,
+			IsPrimary:         p.IsPrimary,
+			ObserverName:      p.ObserverName,
+			ISSLatitude:       issLat,
+			ISSLongitude:      issLon,
 		})
 	}
 
@@ -1138,11 +1197,9 @@ func loginAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Заглушка: реальная авторизация будет в лабе 4
-	writeJSON(w, http.StatusOK, AuthResponse{
-		Success: true,
-		Token:   "dummy-token",
-	})
+	// Лаба 3: без токена — идентичность API = singleton (GetCurrentUser / GetModeratorUser).
+	// Полноценная аутентификация — в лабе 4.
+	writeJSON(w, http.StatusOK, AuthResponse{Success: true})
 }
 
 func logoutAPIHandler(w http.ResponseWriter, r *http.Request) {

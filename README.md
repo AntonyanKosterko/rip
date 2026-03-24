@@ -6,6 +6,8 @@
 **Стек:** Go (net/http, html/template), PostgreSQL 12, lib/pq  
 **Порт:** http://localhost:8080  
 
+Полное описание архитектуры, БД, всех маршрутов и API — в файле **[PROJECT.md](./PROJECT.md)**.
+
 ---
 
 ### Описание
@@ -27,7 +29,8 @@
 │   └── iss_position.html        # Страница заявки (таблица точек + кнопка «Удалить»)
 ├── static/
 │   └── styles.css               # Тёмно-синяя тема (#001233), красные кнопки (#D32F2F)
-├── docker-compose.yml           # Adminer
+├── docker-compose.yml           # MinIO + одноразовый minio-init (бакет, read, CORS) + Adminer
+├── docker/minio-cors.xml        # CORS для бакета (видео с другого порта, Range)
 └── README.md
 ```
 
@@ -80,8 +83,26 @@ docker compose up -d
 go run .
 
 # Приложение: http://localhost:8080
+# MinIO API:  http://localhost:9000  (консоль: http://localhost:9001)
 # Adminer:    http://localhost:8081
 ```
+
+### Видео из MinIO не открывается в браузере
+
+Сайт отдаёт в `<video>` **ровно тот URL**, что в БД (`observation_points.video_url`). Код тут ни при чём — проверь доступность тем же способом, что браузер:
+
+```bash
+# подставь свой URL из БД
+curl -sI "http://localhost:9000/iss-bucket/путь/к/файлу.mp4"
+```
+
+- **403 Forbidden** — у бакета нет прав на чтение без ключей. После `docker compose up -d` должен отработать сервис **`minio-init`** (`mc anonymous set download`). Если MinIO уже был поднят раньше — выполни вручную: `docker compose run --rm minio-init` (или в консоли MinIO выдай read на бакет).
+- **404** — неверный путь или объект не залит.
+- **Connection refused** — контейнер MinIO не запущен или другой порт.
+
+**Важно:** в `video_url` должен быть хост, **видимый браузеру** (обычно `http://localhost:9000/...`). Адрес вида `http://minio:9000/...` сработает только внутри Docker, с твоего ПК страница так не загрузит файл.
+
+Загрузка через API кладёт ссылку с базой из переменной **`MINIO_PUBLIC_URL`** (по умолчанию `http://localhost:9000`) — её и должен открывать браузер.
 
 ### Adminer
 

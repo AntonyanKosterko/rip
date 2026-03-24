@@ -47,20 +47,23 @@ func main() {
 	templates["iss_position"] = template.Must(
 		template.ParseFiles("templates/base.html", "templates/iss_position.html"))
 
+	mux := http.NewServeMux()
+
 	// Статика
 	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// API-маршруты (REST для SPA)
-	registerAPIHandlers()
+	registerAPIHandlers(mux)
 
-	// Маршруты HTML-интерфейса (лаба 1/2): 3 GET + 2 POST = 5 HTTP методов
-	http.HandleFunc("/", servicesListHandler)              // GET: список услуг
-	http.HandleFunc("/services/", servicesRouter)          // GET: детальная + POST: добавить в заявку
-	http.HandleFunc("/iss-positions/", issPositionsRouter) // GET: просмотр заявки + POST: удалить заявку
+	// Маршруты HTML: сначала префиксы, "/" — последним (явный fallback)
+	mux.HandleFunc("/services/", servicesRouter)            // GET: детальная + POST: добавить в заявку
+	mux.HandleFunc("/iss-positions/", issPositionsRouter)  // GET: просмотр заявки + POST: удалить заявку
+	mux.HandleFunc("/", servicesListHandler)               // GET: список услуг и неизвестные пути
 
-	fmt.Println("Сервер запущен на http://localhost:8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	port := getEnv("PORT", "8080")
+	fmt.Printf("Сервер запущен на http://localhost:%s\n", port)
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatalf("Ошибка запуска сервера: %v", err)
 	}
 }
@@ -265,10 +268,26 @@ func deleteISSPositionSQL(posID int) error {
 // HTTP-обработчики (контроллеры)
 // ============================================================
 
+// redirectHome — редирект на главную: Location + HTML (meta refresh / script) на случай кэша или старых клиентов
+func redirectHome(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	w.Header().Set("Location", "/")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusFound)
+	const page = `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url=/">
+<title>Перенаправление</title></head><body>
+<script>location.replace("/")</script>
+<p><a href="/">Перейти на главную</a></p>
+</body></html>`
+	fmt.Fprint(w, page)
+}
+
 // servicesListHandler — GET /: список услуг с поиском
+// (паттерн "/" в net/http также перехватывает неизвестные пути, не совпавшие с более специфичными маршрутами)
 func servicesListHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
-		http.NotFound(w, r)
+		redirectHome(w, r)
 		return
 	}
 
@@ -318,19 +337,28 @@ func servicesRouter(w http.ResponseWriter, r *http.Request) {
 
 	// Проверяем, не является ли это POST на /services/<id>/add/
 	parts := strings.Split(path, "/")
-	if len(parts) == 2 && parts[1] == "add" && r.Method == http.MethodPost {
+	if len(parts) == 2 && parts[1] == "add" {
+		if r.Method != http.MethodPost {
+			redirectHome(w, r)
+			return
+		}
 		id, err := strconv.Atoi(parts[0])
 		if err != nil {
-			http.NotFound(w, r)
+			redirectHome(w, r)
 			return
 		}
 		addToISSPositionHandler(w, r, id)
 		return
 	}
 
+	if len(parts) != 1 {
+		redirectHome(w, r)
+		return
+	}
+
 	id, err := strconv.Atoi(parts[0])
 	if err != nil {
-		http.NotFound(w, r)
+		redirectHome(w, r)
 		return
 	}
 
@@ -341,7 +369,7 @@ func servicesRouter(w http.ResponseWriter, r *http.Request) {
 func serviceDetailHandler(w http.ResponseWriter, r *http.Request, pointID int) {
 	point, err := getPointByID(pointID)
 	if err != nil {
-		http.NotFound(w, r)
+		redirectHome(w, r)
 		return
 	}
 
@@ -383,20 +411,29 @@ func issPositionsRouter(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(path, "/")
 
 	// POST /iss-positions/<id>/delete/ — удаление заявки через SQL
-	if len(parts) == 2 && parts[1] == "delete" && r.Method == http.MethodPost {
+	if len(parts) == 2 && parts[1] == "delete" {
+		if r.Method != http.MethodPost {
+			redirectHome(w, r)
+			return
+		}
 		id, err := strconv.Atoi(parts[0])
 		if err != nil {
-			http.NotFound(w, r)
+			redirectHome(w, r)
 			return
 		}
 		deleteISSPositionHandler(w, r, id)
 		return
 	}
 
+	if len(parts) != 1 {
+		redirectHome(w, r)
+		return
+	}
+
 	// GET /iss-positions/<id>/ — просмотр заявки
 	id, err := strconv.Atoi(parts[0])
 	if err != nil {
-		http.NotFound(w, r)
+		redirectHome(w, r)
 		return
 	}
 	issPositionDetailHandler(w, r, id)
@@ -406,13 +443,13 @@ func issPositionsRouter(w http.ResponseWriter, r *http.Request) {
 func issPositionDetailHandler(w http.ResponseWriter, r *http.Request, posID int) {
 	pos, err := getISSPositionByID(posID)
 	if err != nil {
-		http.NotFound(w, r)
+		redirectHome(w, r)
 		return
 	}
 
-	// Удалённые заявки просматривать нельзя
+	// Удалённые заявки просматривать нельзя — редирект на главную
 	if pos.Status == "deleted" {
-		http.Error(w, "Заявка удалена", http.StatusGone)
+		redirectHome(w, r)
 		return
 	}
 

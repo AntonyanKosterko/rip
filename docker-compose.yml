@@ -14,6 +14,26 @@ services:
     volumes:
       - minio_data:/data
 
+  # Один раз: бакет iss-bucket, анонимное чтение (иначе браузер получит 403) + CORS для Range при воспроизведении видео
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    volumes:
+      - ./docker/minio-cors.xml:/tmp/cors.xml:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        for i in $$(seq 1 30); do
+          mc alias set local http://minio:9000 minioadmin minioadmin && break
+          sleep 1
+        done
+        mc mb -p local/iss-bucket || true
+        mc anonymous set download local/iss-bucket
+        mc cors set local/iss-bucket /tmp/cors.xml || true
+    restart: "no"
+
   adminer:
     image: adminer
     container_name: iss-adminer

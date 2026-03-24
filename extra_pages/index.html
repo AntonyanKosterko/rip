@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Точки наблюдения МКС — Видимость МКС</title>
+    <style>
+        /* Reset & Base */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-size: 16px; scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #001233;
+            color: #FFFFFF;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.6;
+        }
+        a { text-decoration: none; color: inherit; }
+        img { max-width: 100%; height: auto; display: block; }
+
+        /* Header */
+        .main-header {
+            background-color: #000B1D;
+            border-bottom: 1px solid #1A3A5C;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .home-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #FFFFFF;
+            transition: color 0.2s;
+        }
+        .home-btn:hover { color: #019DF8; }
+        .home-btn-text { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+
+        /* Sub-header (поиск + корзина — под хедером) */
+        .sub-header {
+            background: #000B1D;
+            border-bottom: 1px solid #1A3A5C;
+            padding: 8px 0;
+        }
+        .sub-header-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .sub-header-content .search-form { flex: 1; }
+
+        /* Cart (спутник/МКС) */
+        .cart-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            color: #FFFFFF;
+            transition: color 0.2s;
+            flex-shrink: 0;
+        }
+        .cart-icon:hover { color: #019DF8; }
+        .cart-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #D32F2F;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            width: 18px;
+            height: 18px;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        /* Search Bar */
+        .search-form {
+            display: flex;
+            gap: 8px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 10px 16px;
+            background: #0A1929;
+            border: 1px solid #1A3A5C;
+            border-radius: 0;
+            color: #FFFFFF;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input::placeholder { color: #607D8B; }
+        .search-input:focus { border-color: #019DF8; }
+        .search-btn {
+            padding: 10px 16px;
+            background: #D32F2F;
+            border: none;
+            border-radius: 0;
+            color: #FFFFFF;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .search-btn:hover { background: #B71C1C; }
+
+        /* Content */
+        .content {
+            flex: 1;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px;
+            width: 100%;
+        }
+
+        /* Section Header */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            border-left: 4px solid #D32F2F;
+            padding-left: 12px;
+        }
+
+        /* Services Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        .service-card {
+            background: #0A1929;
+            border: 1px solid #1A3A5C;
+            border-radius: 0;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(1, 157, 248, 0.15);
+            border-color: #019DF8;
+        }
+        .card-image {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0A1929 0%, #0D2137 100%);
+        }
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .service-card:hover .card-image img { transform: scale(1.05); }
+        .card-image-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0, 11, 29, 0.8) 0%, transparent 60%);
+        }
+        .card-label {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: #D32F2F;
+            color: #FFFFFF;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 0;
+        }
+        .card-coords-badge {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(0, 18, 51, 0.85);
+            color: #019DF8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border: 1px solid #019DF8;
+            border-radius: 0;
+        }
+        .card-content {
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-title { font-size: 1.15rem; font-weight: 700; color: #FFFFFF; margin-bottom: 4px; }
+        .card-country { font-size: 0.85rem; color: #B0BEC5; margin-bottom: 12px; }
+        .card-meta {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #607D8B;
+        }
+        .card-elevation { display: flex; align-items: center; gap: 4px; }
+        .card-timezone { color: #019DF8; font-weight: 600; }
+
+        /* Footer */
+        .main-footer {
+            background-color: #000B1D;
+            border-top: 1px solid #1A3A5C;
+            padding: 20px 24px;
+            margin-top: auto;
+        }
+        .footer-content { max-width: 1280px; margin: 0 auto; text-align: center; }
+        .footer-content p { color: #607D8B; font-size: 0.85rem; }
+        .footer-sub { margin-top: 4px; font-size: 0.75rem !important; color: #455A64 !important; }
+
+        .nav-form-block {
+            margin-bottom: 24px;
+            padding: 16px 20px;
+            background: #0A1929;
+            border: 1px solid #1A3A5C;
+            border-radius: 0;
+        }
+        .nav-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .nav-form-label { font-size: 0.95rem; color: #B0BEC5; white-space: nowrap; }
+        .nav-input { max-width: 200px; }
+        .nav-form-hint { margin-top: 8px; font-size: 0.8rem; color: #607D8B; }
+
+        @media (max-width: 600px) {
+            .header-content { padding: 0 16px; }
+            .content { padding: 16px; }
+            .services-grid { grid-template-columns: 1fr; }
+            .sub-header-content { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <a href="/" class="home-btn" title="На главную — Видимость МКС">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span class="home-btn-text">Видимость МКС</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Подхедер: поиск + корзина (под хедером) -->
+    <div class="sub-header">
+        <div class="sub-header-content">
+            <form method="get" action="/" class="search-form">
+                <input type="text" name="search" value="" placeholder="Поиск по названию точки..." class="search-input">
+                <button type="submit" class="search-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </button>
+            </form>
+            <a href="/iss-positions/1/" class="cart-icon" title="Текущая заявка">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Спутник / МКС -->
+                    <circle cx="12" cy="12" r="3"/>
+                    <line x1="3" y1="12" x2="9" y2="12"/>
+                    <line x1="15" y1="12" x2="21" y2="12"/>
+                    <rect x="1" y="10" width="4" height="4" rx="0.5"/>
+                    <rect x="19" y="10" width="4" height="4" rx="0.5"/>
+                    <line x1="12" y1="9" x2="12" y2="5"/>
+                    <circle cx="12" cy="4" r="1"/>
+                </svg>
+                <span class="cart-badge">3</span>
+            </a>
+        </div>
+    </div>
+
+    <main class="content">
+        <!-- Переход по введённому значению: 2 → вторая страница, 3 → третья -->
+        <div class="nav-form-block">
+            <form id="nav-form" class="nav-form">
+                <label class="nav-form-label">Перейти на страницу:</label>
+                <input type="text" id="page-code" class="search-input nav-input" placeholder="Введите 2 или 3" autocomplete="off">
+                <button type="submit" class="search-btn">Перейти</button>
+            </form>
+            <p class="nav-form-hint">2 — детальная страница, 3 — страница заявки</p>
+        </div>
+        <div class="section-header">
+            <h2 class="section-title">Точки наблюдения</h2>
+        </div>
+        <div class="services-grid">
+            <a href="/services/1/" class="service-card">
+                <div class="card-image">
+                    <img src="https://via.placeholder.com/400x200/0A1929/019DF8?text=Москва" alt="Москва">
+                    <div class="card-image-overlay"></div>
+                    <span class="card-label">Наблюдение</span>
+                    <span class="card-coords-badge">55.76°, 37.62°</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Москва</h3>
+                    <p class="card-country">Россия</p>
+                    <div class="card-meta">
+                        <span class="card-elevation">↑ 156 м</span>
+                        <span class="card-timezone">UTC+3 (МСК)</span>
+                    </div>
+                </div>
+            </a>
+            <a href="/services/2/" class="service-card">
+                <div class="card-image">
+                    <img src="https://via.placeholder.com/400x200/0A1929/019DF8?text=Байконур" alt="Байконур">
+                    <div class="card-image-overlay"></div>
+                    <span class="card-label">Наблюдение</span>
+                    <span class="card-coords-badge">45.96°, 63.31°</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Байконур</h3>
+                    <p class="card-country">Казахстан</p>
+                    <div class="card-meta">
+                        <span class="card-elevation">↑ 90 м</span>
+                        <span class="card-timezone">UTC+6</span>
+                    </div>
+                </div>
+            </a>
+            <a href="/services/3/" class="service-card">
+                <div class="card-image">
+                    <img src="https://via.placeholder.com/400x200/0A1929/019DF8?text=Мыс+Канаверал" alt="Мыс Канаверал">
+                    <div class="card-image-overlay"></div>
+                    <span class="card-label">Наблюдение</span>
+                    <span class="card-coords-badge">28.39°, −80.61°</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Мыс Канаверал</h3>
+                    <p class="card-country">США</p>
+                    <div class="card-meta">
+                        <span class="card-elevation">↑ 3 м</span>
+                        <span class="card-timezone">UTC−5 (EST)</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="footer-content">
+            <p>&copy; 2026 — Определение времени видимости МКС с Земли</p>
+            <p class="footer-sub">Лабораторная работа №2 — РИП, МГТУ им. Н.Э. Баумана</p>
+        </div>
+    </footer>
+    <script>
+        document.getElementById('nav-form').onsubmit = function(e) {
+            e.preventDefault();
+            var v = (document.getElementById('page-code').value || '').trim();
+            if (v === '2') { window.location.href = 'page2.html'; return; }
+            if (v === '3') { window.location.href = 'page3.html'; return; }
+            alert('Введите 2 (детальная страница) или 3 (страница заявки)');
+        };
+    </script>
+</body>
+</html>

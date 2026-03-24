@@ -1,207 +1,262 @@
 {
   "info": {
     "_postman_id": "b0f8d9f4-0000-0000-0000-lab3collection",
-    "name": "Lab3 ISS Visibility API",
+    "name": "Lab2+Lab3 ISS Visibility (21 запрос)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Коллекция запросов для лабораторной работы 3 (REST API «Видимость МКС»). Базовый URL: http://localhost:8080"
+    "description": "Лаба 2: 5 HTTP-запросов к HTML-интерфейсу. Лаба 3: 16 REST API. Всего 21. Базовый URL: http://localhost:8080"
   },
   "item": [
     {
-      "name": "01 GET список заявок (фильтрация по статусу и дате формирования)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/iss-positions?status=completed&formed_from=2026-03-01&formed_to=2026-03-31"
-      }
-    },
-    {
-      "name": "02 GET иконка корзины (текущий черновик)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/cart"
-      }
-    },
-    {
-      "name": "03 DELETE удалить черновик заявки (если есть)",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": "http://localhost:8080/api/iss-positions/1",
-        "description": "Замени 1 на id черновика из ответа запроса 02."
-      }
-    },
-    {
-      "name": "04 GET список услуг (с фильтром search)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/services?search=мос"
-      }
-    },
-    {
-      "name": "05 POST добавить новую услугу с картинкой и видео",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "formdata",
-          "formdata": [
-            {"key": "name", "value": "Новая точка наблюдения", "type": "text"},
-            {"key": "country", "value": "Россия", "type": "text"},
-            {"key": "latitude", "value": "55.0000", "type": "text"},
-            {"key": "longitude", "value": "37.0000", "type": "text"},
-            {"key": "elevation", "value": "100", "type": "text"},
-            {"key": "timezone", "value": "UTC+3", "type": "text"},
-            {"key": "best_time", "value": "Март — апрель", "type": "text"},
-            {"key": "light_pollution", "value": "Средняя", "type": "text"},
-            {"key": "weather_conditions", "value": "Ясно", "type": "text"},
-            {"key": "description", "value": "Тестовая точка для лабы 3", "type": "text"},
-            {"key": "image", "type": "file", "description": "Добавь файл изображения (.jpg)"},
-            {"key": "video", "type": "file", "description": "Добавь файл видео (.mp4)"}
-          ]
+      "name": "Лаба 2 — веб-интерфейс (5 запросов)",
+      "item": [
+        {
+          "name": "L2-01 GET / — список точек наблюдения (+ поиск в query)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/",
+            "description": "Опционально: ?search=мос — фильтр по названию/стране (как на сайте)."
+          }
         },
-        "url": "http://localhost:8080/api/services",
-        "description": "В Body → form-data добавь файлы image и video. После создания запомни id новой услуги."
-      }
-    },
-    {
-      "name": "06 POST добавить первую услугу в заявку (через корзину)",
-      "request": {
-        "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"point_id\": 1\n}",
-          "options": {"raw": {"language": "json"}}
+        {
+          "name": "L2-02 GET /services/{id}/ — детальная страница точки",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/services/1/",
+            "description": "Замени 1 на id точки (например Москва = 1)."
+          }
         },
-        "url": "http://localhost:8080/api/cart/items",
-        "description": "Замени 1 на id услуги (например, Москва = 1)."
-      }
-    },
-    {
-      "name": "07 POST добавить вторую услугу в заявку (через корзину)",
-      "request": {
-        "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"point_id\": 2\n}",
-          "options": {"raw": {"language": "json"}}
+        {
+          "name": "L2-03 GET /iss-positions/{id}/ — просмотр заявки (HTML)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/iss-positions/1/",
+            "description": "Замени 1 на id заявки-черновика или сформированной. Удалённая заявка → редирект на главную."
+          }
         },
-        "url": "http://localhost:8080/api/cart/items",
-        "description": "Замени 2 на id другой услуги (например, Байконур = 2)."
-      }
-    },
-    {
-      "name": "08 GET иконка корзины (2 услуги в черновике)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/cart",
-        "description": "В ответе будет id черновика и count=2. Запомни id для запросов 09–14."
-      }
-    },
-    {
-      "name": "09 GET заявка (детальная, с услугами)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/iss-positions/1",
-        "description": "Замени 1 на id черновика из запроса 08."
-      }
-    },
-    {
-      "name": "10 PUT изменить запись м-м (точка в заявке)",
-      "request": {
-        "method": "PUT",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"is_primary\": true,\n  \"observer_name\": \"Иванов Алексей Сергеевич\"\n}",
-          "options": {"raw": {"language": "json"}}
+        {
+          "name": "L2-04 POST /services/{id}/add/ — добавить точку в заявку",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/services/1/add/",
+            "description": "Замени 1 на id услуги. Тело не требуется. Ответ: редирект 303 на страницу услуги."
+          }
         },
-        "url": "http://localhost:8080/api/iss-positions/1/points/1",
-        "description": "Замени первый 1 на id заявки, второй 1 на id точки (point_id из ответа 09)."
-      }
+        {
+          "name": "L2-05 POST /iss-positions/{id}/delete/ — логическое удаление заявки",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/iss-positions/1/delete/",
+            "description": "Замени 1 на id черновика. Только status=draft. Ответ: редирект на главную."
+          }
+        }
+      ]
     },
     {
-      "name": "11 PUT изменить поля заявки (дата наблюдения)",
-      "request": {
-        "method": "PUT",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"observation_date\": \"2026-03-15\"\n}",
-          "options": {"raw": {"language": "json"}}
+      "name": "Лаба 3 — REST API (16 запросов)",
+      "item": [
+        {
+          "name": "L3-01 GET список заявок (фильтр status, formed_from, formed_to)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/iss-positions?status=completed&formed_from=2026-03-01&formed_to=2026-03-31"
+          }
         },
-        "url": "http://localhost:8080/api/iss-positions/1",
-        "description": "Замени 1 на id черновика."
-      }
-    },
-    {
-      "name": "12 PUT завершить черновик (должна вернуться ошибка)",
-      "request": {
-        "method": "PUT",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"status\": \"completed\"\n}",
-          "options": {"raw": {"language": "json"}}
+        {
+          "name": "L3-02 GET черновик заявки МКС (id и число точек)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/iss-draft"
+          }
         },
-        "url": "http://localhost:8080/api/iss-positions/1/complete",
-        "description": "Замени 1 на id черновика. Ожидается 400: завершать можно только сформированную заявку."
-      }
-    },
-    {
-      "name": "13 PUT сформировать заявку (draft → formed)",
-      "request": {
-        "method": "PUT",
-        "header": [],
-        "url": "http://localhost:8080/api/iss-positions/1/form",
-        "description": "Замени 1 на id черновика. Формирует заявку и рассчитывает total_visibility."
-      }
-    },
-    {
-      "name": "14 PUT завершить сформированную заявку (formed → completed)",
-      "request": {
-        "method": "PUT",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"status\": \"completed\"\n}",
-          "options": {"raw": {"language": "json"}}
+        {
+          "name": "L3-03 DELETE удалить черновик заявки (если есть)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/iss-positions/1",
+            "description": "Замени 1 на id черновика из ответа L3-02."
+          }
         },
-        "url": "http://localhost:8080/api/iss-positions/1/complete",
-        "description": "Замени 1 на id сформированной заявки. Модератор завершает её."
-      }
-    },
-    {
-      "name": "15 POST регистрация нового пользователя",
-      "request": {
-        "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"username\": \"newuser\",\n  \"full_name\": \"Новый Пользователь\",\n  \"email\": \"newuser@bmstu.ru\",\n  \"password\": \"123456\"\n}",
-          "options": {"raw": {"language": "json"}}
+        {
+          "name": "L3-04 GET список услуг (фильтр search)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/services?search=мос"
+          }
         },
-        "url": "http://localhost:8080/api/users/register"
-      }
-    },
-    {
-      "name": "16 POST аутентификация (заглушка для лабы 4)",
-      "request": {
-        "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"username\": \"newuser\",\n  \"password\": \"123456\"\n}",
-          "options": {"raw": {"language": "json"}}
+        {
+          "name": "L3-05 POST новая услуга (form-data: поля + image + video)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "name", "value": "Новая точка наблюдения", "type": "text"},
+                {"key": "country", "value": "Россия", "type": "text"},
+                {"key": "latitude", "value": "55.0000", "type": "text"},
+                {"key": "longitude", "value": "37.0000", "type": "text"},
+                {"key": "elevation", "value": "100", "type": "text"},
+                {"key": "timezone", "value": "UTC+3", "type": "text"},
+                {"key": "best_time", "value": "Март — апрель", "type": "text"},
+                {"key": "light_pollution", "value": "Средняя", "type": "text"},
+                {"key": "weather_conditions", "value": "Ясно", "type": "text"},
+                {"key": "description", "value": "Тестовая точка для лабы 3", "type": "text"},
+                {"key": "image", "type": "file", "description": "Файл .jpg"},
+                {"key": "video", "type": "file", "description": "Файл .mp4"}
+              ]
+            },
+            "url": "http://localhost:8080/api/services",
+            "description": "В Body → form-data прикрепи image и video. Запомни id новой услуги."
+          }
         },
-        "url": "http://localhost:8080/api/auth/login",
-        "description": "Заглушка: проверяет пользователя и возвращает фиктивный токен."
-      }
+        {
+          "name": "L3-06 POST добавить первую точку в черновик (iss-draft/points)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"point_id\": 1\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/iss-draft/points",
+            "description": "point_id — id услуги (Москва = 1)."
+          }
+        },
+        {
+          "name": "L3-07 POST добавить вторую точку в черновик",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"point_id\": 2\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/iss-draft/points",
+            "description": "Например Байконур = 2."
+          }
+        },
+        {
+          "name": "L3-08 GET черновик (проверка count=2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/iss-draft",
+            "description": "Запомни id черновика для L3-09…L3-14."
+          }
+        },
+        {
+          "name": "L3-09 GET заявка по id (детально + points)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/iss-positions/1",
+            "description": "Замени 1 на id из L3-08."
+          }
+        },
+        {
+          "name": "L3-10 PUT точка в заявке (м-м): is_primary, observer_name, …",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_primary\": true,\n  \"observer_name\": \"Иванов Алексей Сергеевич\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/iss-positions/1/points/1",
+            "description": "Первый 1 — id заявки, второй — point_id из L3-09."
+          }
+        },
+        {
+          "name": "L3-11 PUT заявка — дата наблюдения",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observation_date\": \"2026-03-15\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/iss-positions/1",
+            "description": "Нужно перед формированием заявки (L3-13)."
+          }
+        },
+        {
+          "name": "L3-12 PUT complete на черновике (ожидается ошибка 400)",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/iss-positions/1/complete",
+            "description": "Завершать можно только formed, не draft."
+          }
+        },
+        {
+          "name": "L3-13 PUT сформировать заявку (draft → formed)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/iss-positions/1/form",
+            "description": "Должна быть observation_date (L3-11) и хотя бы одна точка."
+          }
+        },
+        {
+          "name": "L3-14 PUT завершить сформированную заявку (formed → completed)",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/iss-positions/1/complete",
+            "description": "После L3-13 подставь id сформированной заявки."
+          }
+        },
+        {
+          "name": "L3-15 POST регистрация пользователя",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser\",\n  \"full_name\": \"Новый Пользователь\",\n  \"email\": \"newuser@bmstu.ru\",\n  \"password\": \"123456\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/users/register"
+          }
+        },
+        {
+          "name": "L3-16 POST логин (заглушка, без токена, singleton в коде)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser\",\n  \"password\": \"123456\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "http://localhost:8080/api/auth/login",
+            "description": "Ответ {success:true}. Текущий пользователь API — GetCurrentUser() (ivanov id=1)."
+          }
+        }
+      ]
     }
   ]
 }
