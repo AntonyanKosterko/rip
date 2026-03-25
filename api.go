@@ -19,6 +19,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // ============================================================
@@ -306,6 +307,11 @@ type AuthResponse struct {
 // ============================================================
 
 func registerAPIHandlers(mux *http.ServeMux) {
+	// Swagger (ЛР4)
+	mux.HandleFunc("/swagger", swaggerUIHandler)
+	mux.HandleFunc("/swagger/", swaggerUIHandler)
+	mux.HandleFunc("/openapi.json", openAPISpecHandler)
+
 	// Услуги
 	mux.HandleFunc("/api/services", servicesAPIHandler)
 	mux.HandleFunc("/api/services/", serviceByIDAPIHandler)
@@ -333,6 +339,9 @@ func servicesAPIHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		handleGetServices(w, r)
 	case http.MethodPost:
+		if _, ok := requireAuth(w, r); !ok {
+			return
+		}
 		handleCreateService(w, r)
 	default:
 		w.Header().Set("Allow", "GET, POST")
@@ -521,7 +530,10 @@ func issDraftInfoAPIHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
 		return
 	}
-	user := GetCurrentUser()
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	draft, err := getDraftISSPosition(user.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -559,7 +571,10 @@ func issDraftPointsAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := GetCurrentUser()
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	if err := addPointToISSPosition(user.ID, req.PointID); err != nil {
 		writeError(w, http.StatusInternalServerError, "Ошибка добавления в заявку: "+err.Error())
 		return
@@ -657,6 +672,10 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
 		return
 	}
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
 	fromStr := strings.TrimSpace(r.URL.Query().Get("formed_from"))
@@ -688,6 +707,10 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 	if status != "" {
 		query += ` AND ip.status = $` + strconv.Itoa(len(args)+1)
 		args = append(args, status)
+	}
+	if user.Role != roleModerator {
+		query += ` AND ip.creator_id = $` + strconv.Itoa(len(args)+1)
+		args = append(args, user.ID)
 	}
 	if fromStr != "" {
 		if _, err := time.Parse("2006-01-02", fromStr); err == nil {
@@ -748,6 +771,10 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) {
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		redirectHome(w, r)
@@ -760,6 +787,10 @@ func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) 
 	}
 	if pos.Status == "deleted" {
 		redirectHome(w, r)
+		return
+	}
+	if !canAccessPosition(user, pos) {
+		writeError(w, http.StatusForbidden, "Нет доступа к заявке")
 		return
 	}
 	points, err := getISSPositionPoints(id)
@@ -850,6 +881,10 @@ func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) 
 }
 
 func handleUpdateISSPosition(w http.ResponseWriter, r *http.Request, idStr string) {
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	var req ISSPositionUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "Некорректный JSON")
@@ -867,6 +902,10 @@ func handleUpdateISSPosition(w http.ResponseWriter, r *http.Request, idStr strin
 	}
 	if pos.Status != "draft" && pos.Status != "formed" {
 		writeError(w, http.StatusBadRequest, "Редактировать можно только черновик или сформированную заявку")
+		return
+	}
+	if !canAccessPosition(user, pos) {
+		writeError(w, http.StatusForbidden, "Нет доступа к заявке")
 		return
 	}
 
@@ -894,6 +933,10 @@ func handleUpdateISSPosition(w http.ResponseWriter, r *http.Request, idStr strin
 }
 
 func handleDeleteISSPosition(w http.ResponseWriter, r *http.Request, idStr string) {
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Некорректный id заявки")
@@ -905,8 +948,7 @@ func handleDeleteISSPosition(w http.ResponseWriter, r *http.Request, idStr strin
 		return
 	}
 	// Разрешаем удалять только черновик текущего пользователя
-	user := GetCurrentUser()
-	if pos.Status != "draft" || pos.CreatorID != user.ID {
+	if user.Role != roleModerator && (pos.Status != "draft" || pos.CreatorID != user.ID) {
 		writeError(w, http.StatusBadRequest, "Удалять можно только собственный черновик")
 		return
 	}
@@ -918,6 +960,10 @@ func handleDeleteISSPosition(w http.ResponseWriter, r *http.Request, idStr strin
 }
 
 func handleFormISSPosition(w http.ResponseWriter, r *http.Request, idStr string) {
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Некорректный id заявки")
@@ -928,8 +974,7 @@ func handleFormISSPosition(w http.ResponseWriter, r *http.Request, idStr string)
 		writeError(w, http.StatusNotFound, "Заявка не найдена")
 		return
 	}
-	user := GetCurrentUser()
-	if pos.CreatorID != user.ID {
+	if user.Role != roleModerator && pos.CreatorID != user.ID {
 		writeError(w, http.StatusForbidden, "Сформировать заявку может только её создатель")
 		return
 	}
@@ -976,6 +1021,14 @@ func handleFormISSPosition(w http.ResponseWriter, r *http.Request, idStr string)
 }
 
 func handleCompleteISSPosition(w http.ResponseWriter, r *http.Request, idStr string) {
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
+	if user.Role != roleModerator {
+		writeError(w, http.StatusForbidden, "Завершение заявки доступно только модератору")
+		return
+	}
 	var req struct {
 		Status string `json:"status"`
 	}
@@ -1005,12 +1058,11 @@ func handleCompleteISSPosition(w http.ResponseWriter, r *http.Request, idStr str
 		return
 	}
 
-	moderator := GetModeratorUser()
 	if _, err := db.Exec(
 		`UPDATE iss_positions
 		 SET status = $1, moderator_id = $2, completed_at = NOW()
 		 WHERE id = $3 AND status = 'formed'`,
-		req.Status, moderator.ID, id,
+		req.Status, user.ID, id,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, "Ошибка обновления статуса заявки: "+err.Error())
 		return
@@ -1019,6 +1071,10 @@ func handleCompleteISSPosition(w http.ResponseWriter, r *http.Request, idStr str
 }
 
 func handleUpdatePositionPoint(w http.ResponseWriter, r *http.Request, posStr, pointStr string) {
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	posID, err := strconv.Atoi(posStr)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Некорректный id заявки")
@@ -1043,6 +1099,10 @@ func handleUpdatePositionPoint(w http.ResponseWriter, r *http.Request, posStr, p
 	}
 	if pos.Status != "draft" {
 		writeError(w, http.StatusBadRequest, "Изменять точки можно только в черновике")
+		return
+	}
+	if user.Role != roleModerator && pos.CreatorID != user.ID {
+		writeError(w, http.StatusForbidden, "Нет доступа к заявке")
 		return
 	}
 
@@ -1090,6 +1150,10 @@ func handleUpdatePositionPoint(w http.ResponseWriter, r *http.Request, posStr, p
 }
 
 func handleDeletePositionPoint(w http.ResponseWriter, r *http.Request, posStr, pointStr string) {
+	user, ok := requireAuth(w, r)
+	if !ok {
+		return
+	}
 	posID, err := strconv.Atoi(posStr)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Некорректный id заявки")
@@ -1108,6 +1172,10 @@ func handleDeletePositionPoint(w http.ResponseWriter, r *http.Request, posStr, p
 	}
 	if pos.Status != "draft" {
 		writeError(w, http.StatusBadRequest, "Удалять точки можно только в черновике")
+		return
+	}
+	if user.Role != roleModerator && pos.CreatorID != user.ID {
+		writeError(w, http.StatusForbidden, "Нет доступа к заявке")
 		return
 	}
 
@@ -1149,12 +1217,22 @@ func registerUserAPIHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Поля username и full_name обязательны")
 		return
 	}
+	if strings.TrimSpace(req.Password) == "" {
+		writeError(w, http.StatusBadRequest, "Поле password обязательно")
+		return
+	}
+
+	passHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Ошибка хэширования пароля")
+		return
+	}
 
 	var id int
-	err := db.QueryRow(
-		`INSERT INTO users (username, full_name, email)
-		 VALUES ($1, $2, NULLIF($3, '')) RETURNING id`,
-		req.Username, req.FullName, req.Email,
+	err = db.QueryRow(
+		`INSERT INTO users (username, full_name, email, password_hash)
+		 VALUES ($1, $2, NULLIF($3, ''), $4) RETURNING id`,
+		req.Username, req.FullName, req.Email, string(passHash),
 	).Scan(&id)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Ошибка регистрации пользователя: "+err.Error())
@@ -1187,19 +1265,36 @@ func loginAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var exists bool
-	if err := db.QueryRow(`SELECT EXISTS (SELECT 1 FROM users WHERE username = $1)`, req.Username).Scan(&exists); err != nil {
+	var id int
+	var storedHash sql.NullString
+	if err := db.QueryRow(`SELECT id, COALESCE(password_hash, '') FROM users WHERE username = $1`, req.Username).Scan(&id, &storedHash); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusUnauthorized, "Неверный логин или пароль")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "Ошибка проверки пользователя: "+err.Error())
 		return
 	}
-	if !exists {
+	if !storedHash.Valid || strings.TrimSpace(storedHash.String) == "" {
+		writeError(w, http.StatusUnauthorized, "Неверный логин или пароль")
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(storedHash.String), []byte(req.Password)); err != nil {
 		writeError(w, http.StatusUnauthorized, "Неверный логин или пароль")
 		return
 	}
 
-	// Лаба 3: без токена — идентичность API = singleton (GetCurrentUser / GetModeratorUser).
-	// Полноценная аутентификация — в лабе 4.
-	writeJSON(w, http.StatusOK, AuthResponse{Success: true})
+	u := authUser{
+		ID:       id,
+		Username: req.Username,
+		Role:     roleForUser(id, req.Username),
+	}
+	token, err := createSessionAndToken(r.Context(), w, u)
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "Ошибка сессии (Redis): "+err.Error())
+		return
+	}
+	writeAuthLoginResponse(w, u, token)
 }
 
 func logoutAPIHandler(w http.ResponseWriter, r *http.Request) {
@@ -1208,9 +1303,10 @@ func logoutAPIHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
 		return
 	}
-	// Заглушка: просто возвращаем успех
-	writeJSON(w, http.StatusOK, AuthResponse{
-		Success: true,
-	})
+	if c, err := r.Cookie(sessionCookieName); err == nil && strings.TrimSpace(c.Value) != "" {
+		clearSession(r.Context(), c.Value)
+	}
+	clearSessionCookie(w)
+	writeJSON(w, http.StatusOK, AuthResponse{Success: true})
 }
 

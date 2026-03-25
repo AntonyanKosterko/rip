@@ -37,6 +37,7 @@ func main() {
 
 	// Выполнить миграцию
 	runMigration()
+	ensureAuthSchema()
 
 	// Парсинг шаблонов
 	templates = make(map[string]*template.Template)

@@ -85,7 +85,27 @@ go run .
 # Приложение: http://localhost:8080
 # MinIO API:  http://localhost:9000  (консоль: http://localhost:9001)
 # Adminer:    http://localhost:8081
+# Swagger:    http://localhost:8080/swagger
 ```
+
+### ЛР4: Авторизация, Redis-сессии, JWT, Swagger
+
+- Логин: `POST /api/auth/login` (тело `username/password`).
+- После логина сервер:
+  - создаёт сессию в Redis (`sess:<uuid>`, TTL 24h),
+  - выставляет cookie `iss_session`,
+  - возвращает JWT в поле `token`.
+- Для защищённых методов можно использовать либо cookie, либо заголовок:
+  - `Authorization: Bearer <token>`.
+- Гость получает `401` на список заявок `GET /api/iss-positions`.
+- Роли:
+  - `creator` — видит только свои заявки, не может завершать заявку.
+  - `moderator` — видит все заявки и может вызывать `PUT /api/iss-positions/{id}/complete`.
+
+Тестовые пользователи сидов (если пароль не был задан ранее) автоматически получают пароль `123456`:
+- `ivanov` (creator)
+- `petrova` (moderator)
+- `sidorov` (creator)
 
 ### Видео из MinIO не открывается в браузере
 
