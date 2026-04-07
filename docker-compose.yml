@@ -34,6 +34,13 @@ services:
         mc cors set local/iss-bucket /tmp/cors.xml || true
     restart: "no"
 
+  redis:
+    image: redis:7-alpine
+    container_name: iss-redis
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
   adminer:
     image: adminer
     container_name: iss-adminer

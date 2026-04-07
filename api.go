@@ -1289,9 +1289,9 @@ func loginAPIHandler(w http.ResponseWriter, r *http.Request) {
 		Username: req.Username,
 		Role:     roleForUser(id, req.Username),
 	}
-	token, err := createSessionAndToken(r.Context(), w, u)
+	token, err := generateJWT(u)
 	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "Ошибка сессии (Redis): "+err.Error())
+		writeError(w, http.StatusInternalServerError, "Ошибка генерации JWT: "+err.Error())
 		return
 	}
 	writeAuthLoginResponse(w, u, token)
@@ -1303,10 +1303,24 @@ func logoutAPIHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
 		return
 	}
-	if c, err := r.Cookie(sessionCookieName); err == nil && strings.TrimSpace(c.Value) != "" {
-		clearSession(r.Context(), c.Value)
+	tokenStr := extractBearerToken(r)
+	if tokenStr == "" {
+		writeError(w, http.StatusUnauthorized, "Токен не передан")
+		return
 	}
-	clearSessionCookie(w)
-	writeJSON(w, http.StatusOK, AuthResponse{Success: true})
+	claims, err := parseJWT(tokenStr)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "Невалидный токен")
+		return
+	}
+	ttl := time.Until(claims.ExpiresAt.Time)
+	if ttl <= 0 {
+		ttl = time.Second
+	}
+	if err := addToBlacklist(r.Context(), tokenStr, ttl); err != nil {
+		writeError(w, http.StatusInternalServerError, "Ошибка добавления в blacklist Redis: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Токен добавлен в blacklist Redis"})
 }
 
