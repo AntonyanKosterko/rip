@@ -52,7 +52,7 @@ var (
 
 func getRedisClient() (*redis.Client, error) {
 	redisOnce.Do(func() {
-		addr := getEnv("REDIS_ADDR", "localhost:6379")
+		addr := getEnv("REDIS_ADDR", "localhost:6380")
 		password := getEnv("REDIS_PASSWORD", "")
 		redisClient = redis.NewClient(&redis.Options{
 			Addr:     addr,

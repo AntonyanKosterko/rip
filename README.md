@@ -80,6 +80,8 @@
 docker compose up -d
 
 # 3. Запустить сервер (миграция выполняется автоматически)
+# Redis в compose проброшен на localhost:6380:
+export REDIS_ADDR=localhost:6380
 go run .
 
 # Приложение: http://localhost:8080
@@ -87,6 +89,19 @@ go run .
 # Adminer:    http://localhost:8081
 # Swagger:    http://localhost:8080/swagger
 ```
+
+### ЛР6: запуск как отдельный backend-сервис
+
+Для 6 ЛР бэкенд запускается отдельно от React-приложения из репозитория `ISS_frontend`.
+Внутренний каталог `rip/frontend` в показе не используется.
+
+REST-эндпоинты для фронтенда:
+- `GET /api/services` — список услуг (фильтры: `search`, `country`, `timezone`, `min_elevation`, `max_elevation`)
+- `GET /api/services/{id}` — одна услуга (JSON `404`, если не найдена)
+- `GET /api/cart-icon` — иконка корзины, без авторизации, всегда `200`
+
+Демонстрационные SQL для ЛР6 (изменения в БД и проверка MinIO URL):
+- `scripts/lab6_demo.sql`
 
 ### ЛР4: Авторизация, Redis-сессии, JWT, Swagger
 

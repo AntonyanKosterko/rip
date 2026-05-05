@@ -319,6 +319,8 @@ func registerAPIHandlers(mux *http.ServeMux) {
 	// Черновик заявки (МКС): точки наблюдения перед формированием заявки
 	mux.HandleFunc("/api/iss-draft/points", issDraftPointsAPIHandler)
 	mux.HandleFunc("/api/iss-draft", issDraftInfoAPIHandler)
+	// ЛР6: иконка корзины (без авторизации, ответ 200)
+	mux.HandleFunc("/api/cart-icon", cartIconAPIHandler)
 	mux.HandleFunc("/api/iss-positions/", issPositionsAPIRouter)
 
 	// Заявки (список)
@@ -328,6 +330,32 @@ func registerAPIHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/api/users/register", registerUserAPIHandler)
 	mux.HandleFunc("/api/auth/login", loginAPIHandler)
 	mux.HandleFunc("/api/auth/logout", logoutAPIHandler)
+}
+
+// cartIconAPIHandler — GET /api/cart-icon
+// Требование ЛР6: запрос на иконку корзины без авторизации, но с ответом 200.
+// Для демонстрации возвращаем информацию о черновике пользователя по умолчанию (id=1).
+func cartIconAPIHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		writeError(w, http.StatusMethodNotAllowed, "Метод не поддерживается")
+		return
+	}
+
+	draft, err := getDraftISSPosition(defaultUserID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSON(w, http.StatusOK, ISSDraftInfoResponse{ID: nil, Count: 0})
+			return
+		}
+		// Всё равно 200, чтобы фронт не падал (по заданию важен 200)
+		writeJSON(w, http.StatusOK, ISSDraftInfoResponse{ID: nil, Count: 0})
+		return
+	}
+
+	count := getISSPositionPointsCount(draft.ID)
+	id := draft.ID
+	writeJSON(w, http.StatusOK, ISSDraftInfoResponse{ID: &id, Count: count})
 }
 
 // ============================================================
@@ -350,9 +378,85 @@ func servicesAPIHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetServices(w http.ResponseWriter, r *http.Request) {
-	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	guestID := ensureGuestSession(w, r)
+	viewedOnly := r.URL.Query().Get("viewed") == "1" || strings.EqualFold(r.URL.Query().Get("viewed"), "true")
+	recentLimit := 6
+	if s := strings.TrimSpace(r.URL.Query().Get("limit")); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil || v <= 0 {
+			writeError(w, http.StatusBadRequest, "Некорректный limit")
+			return
+		}
+		recentLimit = v
+	}
+	excludeID := 0
+	if s := strings.TrimSpace(r.URL.Query().Get("exclude_id")); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil || v <= 0 {
+			writeError(w, http.StatusBadRequest, "Некорректный exclude_id")
+			return
+		}
+		excludeID = v
+	}
 
-	points, err := getActivePoints(search)
+	if viewedOnly {
+		ids := getRecentlyViewedServiceIDs(r.Context(), guestID, recentLimit+1)
+		if len(ids) == 0 {
+			writeJSON(w, http.StatusOK, []ServiceResponse{})
+			return
+		}
+		filteredIDs := make([]int, 0, len(ids))
+		for _, id := range ids {
+			if id == excludeID {
+				continue
+			}
+			filteredIDs = append(filteredIDs, id)
+		}
+		if len(filteredIDs) == 0 {
+			writeJSON(w, http.StatusOK, []ServiceResponse{})
+			return
+		}
+
+		points, err := getActivePointsByIDs(filteredIDs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Ошибка получения данных: "+err.Error())
+			return
+		}
+
+		resp := make([]ServiceResponse, 0, len(points))
+		for _, p := range points {
+			resp = append(resp, serviceToResponse(p))
+			if len(resp) >= recentLimit {
+				break
+			}
+		}
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+
+	filters := ServiceFilters{
+		Search:   strings.TrimSpace(r.URL.Query().Get("search")),
+		Country:  strings.TrimSpace(r.URL.Query().Get("country")),
+		Timezone: strings.TrimSpace(r.URL.Query().Get("timezone")),
+	}
+	if s := strings.TrimSpace(r.URL.Query().Get("min_elevation")); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "Некорректный min_elevation")
+			return
+		}
+		filters.MinElevation = &v
+	}
+	if s := strings.TrimSpace(r.URL.Query().Get("max_elevation")); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "Некорректный max_elevation")
+			return
+		}
+		filters.MaxElevation = &v
+	}
+
+	points, err := getActivePoints(filters)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Ошибка получения данных: "+err.Error())
 		return
@@ -514,9 +618,15 @@ func serviceByIDAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	point, err := getPointByID(id)
 	if err != nil {
-		redirectHome(w, r)
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Услуга не найдена")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "Ошибка получения услуги: "+err.Error())
 		return
 	}
+	guestID := ensureGuestSession(w, r)
+	recordViewedService(r.Context(), guestID, id)
 	writeJSON(w, http.StatusOK, serviceToResponse(*point))
 }
 

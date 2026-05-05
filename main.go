@@ -20,6 +20,16 @@ var (
 
 const defaultUserID = 1 // Пользователь по умолчанию (Иванов)
 
+// ServiceFilters — фильтры каталога услуг для HTML и REST.
+// Поддерживаем несколько параметров, чтобы фронтенд мог передавать фильтры в query.
+type ServiceFilters struct {
+	Search       string
+	Country      string
+	Timezone     string
+	MinElevation *int
+	MaxElevation *int
+}
+
 func main() {
 	// Подключение к PostgreSQL
 	dsn := getEnv("DATABASE_URL", "postgres://root:root@localhost:5433/RIP?sslmode=disable")
@@ -93,17 +103,42 @@ func runMigration() {
 // ORM-функции (работа с БД через database/sql)
 // ============================================================
 
-// getActivePoints — получить все активные точки наблюдения (ORM)
-func getActivePoints(search string) ([]ObservationPoint, error) {
+// getActivePoints — получить активные точки наблюдения с фильтрами (ORM)
+func getActivePoints(filters ServiceFilters) ([]ObservationPoint, error) {
 	query := `SELECT id, name, country, latitude, longitude, elevation, timezone,
 	          best_time, light_pollution, weather_conditions, description,
 	          image_url, video_url, status
 	          FROM observation_points WHERE status = 'active'`
 	var args []interface{}
+	nextArg := func() string {
+		return "$" + strconv.Itoa(len(args)+1)
+	}
 
-	if search != "" {
-		query += ` AND (LOWER(name) LIKE $1 OR LOWER(country) LIKE $1)`
-		args = append(args, "%"+strings.ToLower(search)+"%")
+	if filters.Search != "" {
+		arg := "%" + strings.ToLower(filters.Search) + "%"
+		p := nextArg()
+		query += ` AND (LOWER(name) LIKE ` + p + ` OR LOWER(country) LIKE ` + p + `)`
+		args = append(args, arg)
+	}
+	if filters.Country != "" {
+		p := nextArg()
+		query += ` AND LOWER(country) = ` + p
+		args = append(args, strings.ToLower(filters.Country))
+	}
+	if filters.Timezone != "" {
+		p := nextArg()
+		query += ` AND LOWER(timezone) = ` + p
+		args = append(args, strings.ToLower(filters.Timezone))
+	}
+	if filters.MinElevation != nil {
+		p := nextArg()
+		query += ` AND elevation >= ` + p
+		args = append(args, *filters.MinElevation)
+	}
+	if filters.MaxElevation != nil {
+		p := nextArg()
+		query += ` AND elevation <= ` + p
+		args = append(args, *filters.MaxElevation)
 	}
 	query += ` ORDER BY id`
 
@@ -124,6 +159,64 @@ func getActivePoints(search string) ([]ObservationPoint, error) {
 		points = append(points, p)
 	}
 	return points, nil
+}
+
+// getActivePointsByIDs — получить активные точки по списку id с сохранением исходного порядка.
+func getActivePointsByIDs(ids []int) ([]ObservationPoint, error) {
+	if len(ids) == 0 {
+		return []ObservationPoint{}, nil
+	}
+
+	args := make([]interface{}, 0, len(ids))
+	placeholders := make([]string, 0, len(ids))
+	unique := make(map[int]struct{}, len(ids))
+	orderedUnique := make([]int, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, exists := unique[id]; exists {
+			continue
+		}
+		unique[id] = struct{}{}
+		orderedUnique = append(orderedUnique, id)
+		args = append(args, id)
+		placeholders = append(placeholders, "$"+strconv.Itoa(len(args)))
+	}
+	if len(orderedUnique) == 0 {
+		return []ObservationPoint{}, nil
+	}
+
+	query := `SELECT id, name, country, latitude, longitude, elevation, timezone,
+	          best_time, light_pollution, weather_conditions, description,
+	          image_url, video_url, status
+	          FROM observation_points
+	          WHERE status = 'active' AND id IN (` + strings.Join(placeholders, ",") + `)`
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	byID := make(map[int]ObservationPoint, len(orderedUnique))
+	for rows.Next() {
+		var p ObservationPoint
+		if err := rows.Scan(&p.ID, &p.Name, &p.Country, &p.Latitude, &p.Longitude,
+			&p.Elevation, &p.Timezone, &p.BestTime, &p.LightPollution,
+			&p.WeatherConditions, &p.Description, &p.ImageURL, &p.VideoURL, &p.Status); err != nil {
+			return nil, err
+		}
+		byID[p.ID] = p
+	}
+
+	ordered := make([]ObservationPoint, 0, len(orderedUnique))
+	for _, id := range orderedUnique {
+		if p, ok := byID[id]; ok {
+			ordered = append(ordered, p)
+		}
+	}
+	return ordered, nil
 }
 
 // getPointByID — получить точку по ID (ORM)
@@ -295,7 +388,7 @@ func servicesListHandler(w http.ResponseWriter, r *http.Request) {
 	searchQuery := strings.TrimSpace(r.URL.Query().Get("search"))
 
 	// Получение и поиск услуг через ORM
-	points, err := getActivePoints(searchQuery)
+	points, err := getActivePoints(ServiceFilters{Search: searchQuery})
 	if err != nil {
 		http.Error(w, "Ошибка получения данных: "+err.Error(), 500)
 		return
