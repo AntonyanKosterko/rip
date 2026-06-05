@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -236,104 +237,14 @@ func swaggerUIHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func openAPISpecHandler(w http.ResponseWriter, _ *http.Request) {
-	rb := func(required []string, props map[string]interface{}, example map[string]interface{}) map[string]interface{} {
-		return map[string]interface{}{
-			"required": true,
-			"content": map[string]interface{}{
-				"application/json": map[string]interface{}{
-					"schema":  map[string]interface{}{"type": "object", "required": required, "properties": props},
-					"example": example,
-				},
-			},
-		}
+	data, err := os.ReadFile("openapi/openapi.json")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "OpenAPI spec not found: "+err.Error())
+		return
 	}
-	jr := func(desc string, schema, example map[string]interface{}) map[string]interface{} {
-		return map[string]interface{}{
-			"description": desc,
-			"content":     map[string]interface{}{"application/json": map[string]interface{}{"schema": schema, "example": example}},
-		}
-	}
-	bearerSec := []map[string]interface{}{{"bearerAuth": []string{}}}
-
-	spec := map[string]interface{}{
-		"openapi": "3.0.3",
-		"info": map[string]interface{}{
-			"title":       "ISS Visibility API",
-			"version":     "1.0.0-lab4",
-			"description": "ЛР4: авторизация JWT + blacklist в Redis, роли creator/moderator.",
-		},
-		"servers": []map[string]string{{"url": "http://localhost:8080"}},
-		"components": map[string]interface{}{
-			"securitySchemes": map[string]interface{}{
-				"bearerAuth": map[string]interface{}{
-					"type":         "http",
-					"scheme":       "bearer",
-					"bearerFormat": "JWT",
-				},
-			},
-		},
-		"paths": map[string]interface{}{
-			"/api/auth/login": map[string]interface{}{
-				"post": map[string]interface{}{
-					"summary": "Логин: возвращает JWT-токен",
-					"requestBody": rb(
-						[]string{"username", "password"},
-						map[string]interface{}{"username": map[string]interface{}{"type": "string"}, "password": map[string]interface{}{"type": "string"}},
-						map[string]interface{}{"username": "ivanov", "password": "123456"},
-					),
-					"responses": map[string]interface{}{
-						"200": jr("Успешная аутентификация",
-							map[string]interface{}{"type": "object", "properties": map[string]interface{}{
-								"token": map[string]interface{}{"type": "string"},
-								"role":  map[string]interface{}{"type": "string"},
-								"user":  map[string]interface{}{"type": "object", "properties": map[string]interface{}{"id": map[string]interface{}{"type": "integer"}, "username": map[string]interface{}{"type": "string"}}},
-							}},
-							map[string]interface{}{"token": "eyJhbGciOi...", "role": "creator", "user": map[string]interface{}{"id": 1, "username": "ivanov"}},
-						),
-						"401": jr("Неверный логин или пароль", map[string]interface{}{"type": "object", "properties": map[string]interface{}{"error": map[string]interface{}{"type": "string"}}}, map[string]interface{}{"error": "Неверный логин или пароль"}),
-					},
-				},
-			},
-			"/api/auth/logout": map[string]interface{}{
-				"post": map[string]interface{}{
-					"summary":  "Логаут: добавляет JWT в blacklist Redis",
-					"security": bearerSec,
-					"responses": map[string]interface{}{
-						"200": jr("Токен отозван", map[string]interface{}{"type": "object", "properties": map[string]interface{}{"success": map[string]interface{}{"type": "boolean"}}}, map[string]interface{}{"success": true}),
-					},
-				},
-			},
-			"/api/users/register": map[string]interface{}{
-				"post": map[string]interface{}{
-					"summary": "Регистрация пользователя",
-					"requestBody": rb(
-						[]string{"username", "full_name", "password"},
-						map[string]interface{}{"username": map[string]interface{}{"type": "string"}, "full_name": map[string]interface{}{"type": "string"}, "email": map[string]interface{}{"type": "string"}, "password": map[string]interface{}{"type": "string"}},
-						map[string]interface{}{"username": "newuser", "full_name": "Новый Пользователь", "email": "newuser@bmstu.ru", "password": "123456"},
-					),
-					"responses": map[string]interface{}{"201": map[string]interface{}{"description": "Пользователь зарегистрирован"}},
-				},
-			},
-			"/api/services": map[string]interface{}{
-				"get":  map[string]interface{}{"summary": "Список услуг (публично)", "responses": map[string]interface{}{"200": map[string]interface{}{"description": "Список услуг"}}},
-				"post": map[string]interface{}{"summary": "Создание услуги (auth)", "security": bearerSec, "responses": map[string]interface{}{"201": map[string]interface{}{"description": "Услуга создана"}, "401": map[string]interface{}{"description": "Требуется авторизация"}}},
-			},
-			"/api/iss-draft": map[string]interface{}{"get": map[string]interface{}{"summary": "Черновик текущего пользователя", "security": bearerSec, "responses": map[string]interface{}{"200": map[string]interface{}{"description": "Черновик"}, "401": map[string]interface{}{"description": "Требуется авторизация"}}}},
-			"/api/iss-positions": map[string]interface{}{"get": map[string]interface{}{
-				"summary": "Список заявок (creator: только свои, moderator: все)", "security": bearerSec,
-				"responses": map[string]interface{}{"200": map[string]interface{}{"description": "Список заявок"}, "401": map[string]interface{}{"description": "Требуется авторизация"}},
-			}},
-			"/api/iss-positions/{id}/complete": map[string]interface{}{
-				"put": map[string]interface{}{
-					"summary":  "Завершение/отклонение заявки (только moderator)",
-					"security": bearerSec,
-					"requestBody": rb([]string{"status"}, map[string]interface{}{"status": map[string]interface{}{"type": "string", "enum": []string{"completed", "rejected"}}}, map[string]interface{}{"status": "completed"}),
-					"responses": map[string]interface{}{"200": map[string]interface{}{"description": "Статус обновлен"}, "403": map[string]interface{}{"description": "Только для модератора"}, "401": map[string]interface{}{"description": "Требуется авторизация"}},
-				},
-			},
-		},
-	}
-	writeJSON(w, http.StatusOK, spec)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 func writeAuthLoginResponse(w http.ResponseWriter, u authUser, token string) {

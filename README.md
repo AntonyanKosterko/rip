@@ -96,7 +96,13 @@ go run .
 Внутренний каталог `rip/frontend` в показе не используется.
 
 REST-эндпоинты для фронтенда:
-- `GET /api/services` — список услуг (фильтры: `search`, `country`, `timezone`, `min_elevation`, `max_elevation`)
+- `GET /api/services` — список услуг с пагинацией (`page`, `page_size`, по умолчанию 20) и фильтрами: `search`, `country`, `timezone`, `min_elevation`, `max_elevation`. Ответ: `{ items, total, page, page_size }`. При `viewed=1` — массив (недавно просмотренные).
+
+### Доп. задание: Индексы в БД
+
+- Наполнение: `psql ... -f scripts/seed_observation_points.sql` (>100k точек)
+- Демо EXPLAIN: `scripts/lab_index_demo.sql`
+- Сценарий защиты: [LAB_INDEX_DEMO.md](LAB_INDEX_DEMO.md)
 - `GET /api/services/{id}` — одна услуга (JSON `404`, если не найдена)
 - `GET /api/cart-icon` — иконка корзины, без авторизации, всегда `200`
 

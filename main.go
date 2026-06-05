@@ -73,8 +73,9 @@ func main() {
 	mux.HandleFunc("/", servicesListHandler)               // GET: список услуг и неизвестные пути
 
 	port := getEnv("PORT", "8080")
-	fmt.Printf("Сервер запущен на http://localhost:%s\n", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	printListenAddresses(port)
+	handler := corsMiddleware(mux)
+	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatalf("Ошибка запуска сервера: %v", err)
 	}
 }
@@ -87,15 +88,17 @@ func getEnv(key, fallback string) string {
 }
 
 func runMigration() {
-	data, err := os.ReadFile("migrations/001_init.sql")
-	if err != nil {
-		log.Printf("Миграция не найдена: %v", err)
-		return
-	}
-	if _, err := db.Exec(string(data)); err != nil {
-		log.Printf("Ошибка миграции (может быть уже выполнена): %v", err)
-	} else {
-		fmt.Println("Миграция выполнена успешно")
+	for _, file := range []string{"migrations/001_init.sql", "migrations/002_lab_index.sql"} {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			log.Printf("Миграция %s не найдена: %v", file, err)
+			continue
+		}
+		if _, err := db.Exec(string(data)); err != nil {
+			log.Printf("Ошибка миграции %s (может быть уже выполнена): %v", file, err)
+		} else {
+			fmt.Printf("Миграция %s выполнена успешно\n", file)
+		}
 	}
 }
 
@@ -103,12 +106,13 @@ func runMigration() {
 // ORM-функции (работа с БД через database/sql)
 // ============================================================
 
-// getActivePoints — получить активные точки наблюдения с фильтрами (ORM)
-func getActivePoints(filters ServiceFilters) ([]ObservationPoint, error) {
-	query := `SELECT id, name, country, latitude, longitude, elevation, timezone,
-	          best_time, light_pollution, weather_conditions, description,
-	          image_url, video_url, status
-	          FROM observation_points WHERE status = 'active'`
+const (
+	defaultServicesPageSize = 20
+	maxServicesPageSize     = 100
+)
+
+func buildActivePointsWhere(filters ServiceFilters) (string, []interface{}) {
+	where := ` FROM observation_points WHERE status = 'active'`
 	var args []interface{}
 	nextArg := func() string {
 		return "$" + strconv.Itoa(len(args)+1)
@@ -117,37 +121,34 @@ func getActivePoints(filters ServiceFilters) ([]ObservationPoint, error) {
 	if filters.Search != "" {
 		arg := "%" + strings.ToLower(filters.Search) + "%"
 		p := nextArg()
-		query += ` AND (LOWER(name) LIKE ` + p + ` OR LOWER(country) LIKE ` + p + `)`
+		// Выражение совпадает с GIN-индексом idx_obs_points_search_trgm (pg_trgm)
+		where += ` AND (lower(name) || ' ' || lower(country)) LIKE ` + p
 		args = append(args, arg)
 	}
 	if filters.Country != "" {
 		p := nextArg()
-		query += ` AND LOWER(country) = ` + p
+		where += ` AND LOWER(country) = ` + p
 		args = append(args, strings.ToLower(filters.Country))
 	}
 	if filters.Timezone != "" {
 		p := nextArg()
-		query += ` AND LOWER(timezone) = ` + p
+		where += ` AND LOWER(timezone) = ` + p
 		args = append(args, strings.ToLower(filters.Timezone))
 	}
 	if filters.MinElevation != nil {
 		p := nextArg()
-		query += ` AND elevation >= ` + p
+		where += ` AND elevation >= ` + p
 		args = append(args, *filters.MinElevation)
 	}
 	if filters.MaxElevation != nil {
 		p := nextArg()
-		query += ` AND elevation <= ` + p
+		where += ` AND elevation <= ` + p
 		args = append(args, *filters.MaxElevation)
 	}
-	query += ` ORDER BY id`
+	return where, args
+}
 
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
+func scanObservationPoints(rows *sql.Rows) ([]ObservationPoint, error) {
 	var points []ObservationPoint
 	for rows.Next() {
 		var p ObservationPoint
@@ -158,7 +159,63 @@ func getActivePoints(filters ServiceFilters) ([]ObservationPoint, error) {
 		}
 		points = append(points, p)
 	}
-	return points, nil
+	return points, rows.Err()
+}
+
+// getActivePoints — получить активные точки наблюдения с фильтрами (ORM)
+func getActivePoints(filters ServiceFilters) ([]ObservationPoint, error) {
+	where, args := buildActivePointsWhere(filters)
+	query := `SELECT id, name, country, latitude, longitude, elevation, timezone,
+	          best_time, light_pollution, weather_conditions, description,
+	          image_url, video_url, status` + where + ` ORDER BY id`
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanObservationPoints(rows)
+}
+
+// getActivePointsPaged — список с пагинацией и общим числом записей (доп. задание: индексы)
+func getActivePointsPaged(filters ServiceFilters, page, pageSize int) ([]ObservationPoint, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = defaultServicesPageSize
+	}
+	if pageSize > maxServicesPageSize {
+		pageSize = maxServicesPageSize
+	}
+
+	where, args := buildActivePointsWhere(filters)
+
+	var total int
+	countQuery := `SELECT COUNT(*)` + where
+	if err := db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	selectCols := `SELECT id, name, country, latitude, longitude, elevation, timezone,
+	               best_time, light_pollution, weather_conditions, description,
+	               image_url, video_url, status`
+	limitArg := "$" + strconv.Itoa(len(args)+1)
+	offsetArg := "$" + strconv.Itoa(len(args)+2)
+	query := selectCols + where + ` ORDER BY id LIMIT ` + limitArg + ` OFFSET ` + offsetArg
+	pageArgs := append(append([]interface{}{}, args...), pageSize, (page-1)*pageSize)
+
+	rows, err := db.Query(query, pageArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	points, err := scanObservationPoints(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+	return points, total, nil
 }
 
 // getActivePointsByIDs — получить активные точки по списку id с сохранением исходного порядка.

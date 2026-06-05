@@ -1,0 +1,1040 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ISS Visibility API",
+    "version": "1.7.0-lr7",
+    "description": "ЛР7: API для авторизации, услуг, заявок и m-m точек заявки."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "AuthRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "RegisterUserRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "full_name",
+          "password"
+        ]
+      },
+      "AuthUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
+        },
+        "required": [
+          "token",
+          "role",
+          "user"
+        ]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "ISSDraftInfoResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
+        ]
+      },
+      "ISSDraftAddPointRequest": {
+        "type": "object",
+        "properties": {
+          "point_id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "point_id"
+        ]
+      },
+      "ServiceListPageResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceResponse"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ]
+      },
+      "ServiceResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "elevation": {
+            "type": "integer"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "best_time": {
+            "type": "string"
+          },
+          "light_pollution": {
+            "type": "string"
+          },
+          "weather_conditions": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "video_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "country",
+          "latitude",
+          "longitude",
+          "elevation",
+          "timezone"
+        ]
+      },
+      "ISSPositionListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "status_ru": {
+            "type": "string"
+          },
+          "iss_position_determination_results_count": {
+            "type": "integer",
+            "description": "Количество результатов: 0 пока заявка не завершена, при completed — число точек"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "formed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "observation_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "total_visibility": {
+            "type": "string"
+          },
+          "creator_login": {
+            "type": "string"
+          },
+          "moderator_login": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "status_ru",
+          "iss_position_determination_results_count",
+          "created_at",
+          "total_visibility",
+          "creator_login"
+        ]
+      },
+      "ISSPositionPointResponse": {
+        "type": "object",
+        "properties": {
+          "point_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "elevation": {
+            "type": "integer"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "best_time": {
+            "type": "string"
+          },
+          "light_pollution": {
+            "type": "string"
+          },
+          "weather_conditions": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "video_url": {
+            "type": "string"
+          },
+          "observation_order": {
+            "type": "integer"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "observer_name": {
+            "type": "string"
+          },
+          "iss_latitude": {
+            "type": "number",
+            "nullable": true
+          },
+          "iss_longitude": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "point_id",
+          "name",
+          "country",
+          "latitude",
+          "longitude",
+          "elevation",
+          "timezone",
+          "best_time",
+          "light_pollution",
+          "weather_conditions",
+          "description",
+          "image_url",
+          "video_url",
+          "observation_order",
+          "is_primary",
+          "observer_name"
+        ]
+      },
+      "ISSPositionDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "status_ru": {
+            "type": "string"
+          },
+          "theme_ru": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "creator_id": {
+            "type": "integer"
+          },
+          "creator_name": {
+            "type": "string"
+          },
+          "formed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "moderator_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "moderator_name": {
+            "type": "string"
+          },
+          "observation_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "total_visibility": {
+            "type": "string"
+          },
+          "observation_points_count": {
+            "type": "integer"
+          },
+          "iss_position_determination_results_count": {
+            "type": "integer"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ISSPositionPointResponse"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "status_ru",
+          "theme_ru",
+          "created_at",
+          "creator_id",
+          "creator_name",
+          "moderator_name",
+          "total_visibility",
+          "observation_points_count",
+          "iss_position_determination_results_count",
+          "points"
+        ]
+      },
+      "ISSPositionUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "observation_date": {
+            "type": "string",
+            "example": "2026-05-05"
+          }
+        }
+      },
+      "PositionPointUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "observation_order": {
+            "type": "integer"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "observer_name": {
+            "type": "string"
+          },
+          "iss_latitude": {
+            "type": "number"
+          },
+          "iss_longitude": {
+            "type": "number"
+          }
+        }
+      },
+      "CompleteRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "rejected"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "Логин (JWT)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успешный вход",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Ошибка входа",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Выход (JWT в blacklist)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешный выход",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/register": {
+      "post": {
+        "summary": "Регистрация пользователя",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Пользователь создан"
+          },
+          "400": {
+            "description": "Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services": {
+      "get": {
+        "summary": "Список услуг (пагинация)",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "min_elevation",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "max_elevation",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "viewed",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Недавно просмотренные — ответ массивом (без пагинации)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "exclude_id",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Пагинированный список услуг (или массив при viewed=1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceListPageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/{id}": {
+      "get": {
+        "summary": "Получить услугу по id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Услуга",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iss-draft": {
+      "get": {
+        "summary": "Информация о черновике",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Черновик",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ISSDraftInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iss-draft/points": {
+      "post": {
+        "summary": "Добавить услугу в черновик",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ISSDraftAddPointRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Услуга добавлена"
+          }
+        }
+      }
+    },
+    "/api/iss-positions": {
+      "get": {
+        "summary": "Список заявок",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "formed_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "2026-05-05"
+            }
+          },
+          {
+            "name": "formed_to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "example": "2026-05-05"
+            }
+          },
+          {
+            "name": "observation_points_count",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Фильтр по числу точек наблюдения в заявке"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список заявок",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ISSPositionListItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iss-positions/{id}": {
+      "get": {
+        "summary": "Заявка по id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Детали заявки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ISSPositionDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Обновить заявку",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ISSPositionUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Обновлённая заявка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ISSPositionDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Удалить заявку",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Удалена"
+          }
+        }
+      }
+    },
+    "/api/iss-positions/{id}/form": {
+      "put": {
+        "summary": "Сформировать заявку",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Сформированная заявка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ISSPositionDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iss-positions/{id}/complete": {
+      "put": {
+        "summary": "Завершить или отклонить заявку (модератор)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Обновлённая заявка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ISSPositionDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iss-positions/{id}/points/{pointId}": {
+      "put": {
+        "summary": "Обновить точку заявки (m-m)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionPointUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Точка обновлена"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Удалить точку из заявки (m-m)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Точка удалена"
+          }
+        }
+      }
+    }
+  }
+}

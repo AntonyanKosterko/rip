@@ -1,5 +1,12 @@
-# Go binary
+# Go binaries
 iss-server
+iss-visibility
+iss-api
+bin/
+
+# LibreOffice lock files
+.~lock.*
+**/.~lock.*
 
 # IDE
 .idea/

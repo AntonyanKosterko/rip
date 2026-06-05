@@ -140,6 +140,14 @@ func uploadToMinio(ctx context.Context, objectName string, file multipart.File, 
 // DTO: услуги
 // ============================================================
 
+// ServiceListPageResponse — пагинированный список услуг (доп. задание: индексы)
+type ServiceListPageResponse struct {
+	Items    []ServiceResponse `json:"items"`
+	Total    int               `json:"total"`
+	Page     int               `json:"page"`
+	PageSize int               `json:"page_size"`
+}
+
 type ServiceResponse struct {
 	ID                int     `json:"id"`
 	Name              string  `json:"name"`
@@ -188,11 +196,7 @@ type ISSPositionListItem struct {
 	ID       int    `json:"id"`
 	Status   string `json:"status"`
 	StatusRu string `json:"status_ru"`
-	// ThemeRu — тема проекта (лаба): определение положения МКС
-	ThemeRu string `json:"theme_ru"`
-	// ObservationPointsCount — всего точек наблюдения в заявке
-	ObservationPointsCount int `json:"observation_points_count"`
-	// ISSPositionDeterminationResultsCount — число точек, где зафиксировано положение МКС (iss_latitude + iss_longitude); результат по теме заявки
+	// ISSPositionDeterminationResultsCount — кол-во результатов по предметной области: при completed = число точек, иначе 0
 	ISSPositionDeterminationResultsCount int `json:"iss_position_determination_results_count"`
 
 	CreatedAt       time.Time  `json:"created_at"`
@@ -251,7 +255,7 @@ type ISSPositionDetailResponse struct {
 
 	// ObservationPointsCount — число точек в заявке
 	ObservationPointsCount int `json:"observation_points_count"`
-	// ISSPositionDeterminationResultsCount — сколько точек с зафиксированным положением МКС (по теме заявки)
+	// ISSPositionDeterminationResultsCount — кол-во непустых результатов по теме: при status=completed равно числу точек, иначе 0
 	ISSPositionDeterminationResultsCount int `json:"iss_position_determination_results_count"`
 
 	Points []ISSPositionPointResponse `json:"points"`
@@ -456,15 +460,43 @@ func handleGetServices(w http.ResponseWriter, r *http.Request) {
 		filters.MaxElevation = &v
 	}
 
-	points, err := getActivePoints(filters)
+	page := 1
+	pageSize := defaultServicesPageSize
+	if s := strings.TrimSpace(r.URL.Query().Get("page")); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil || v < 1 {
+			writeError(w, http.StatusBadRequest, "Некорректный page")
+			return
+		}
+		page = v
+	}
+	if s := strings.TrimSpace(r.URL.Query().Get("page_size")); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil || v < 1 {
+			writeError(w, http.StatusBadRequest, "Некорректный page_size")
+			return
+		}
+		pageSize = v
+	}
+
+	points, total, err := getActivePointsPaged(filters, page, pageSize)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Ошибка получения данных: "+err.Error())
 		return
 	}
 
-	resp := make([]ServiceResponse, 0, len(points))
+	if pageSize > maxServicesPageSize {
+		pageSize = maxServicesPageSize
+	}
+
+	resp := ServiceListPageResponse{
+		Items:    make([]ServiceResponse, 0, len(points)),
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+	}
 	for _, p := range points {
-		resp = append(resp, serviceToResponse(p))
+		resp.Items = append(resp.Items, serviceToResponse(p))
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -790,14 +822,17 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
 	fromStr := strings.TrimSpace(r.URL.Query().Get("formed_from"))
 	toStr := strings.TrimSpace(r.URL.Query().Get("formed_to"))
+	pointsStr := strings.TrimSpace(r.URL.Query().Get("observation_points_count"))
 
 	var args []interface{}
 	query := `SELECT ip.id, ip.status, ip.created_at, ip.formed_at, ip.completed_at,
 	          ip.observation_date, ip.total_visibility,
 	          u1.username AS creator_login,
 	          COALESCE(u2.username, '') AS moderator_login,
-	          COALESCE(ptot.points_total, 0) AS observation_points_count,
-	          COALESCE(res.iss_coord_cnt, 0) AS iss_position_determination_results_count
+	          CASE WHEN ip.status = 'completed'
+	               THEN COALESCE(ptot.points_total, 0)
+	               ELSE 0
+	          END AS iss_position_determination_results_count
 	          FROM iss_positions ip
 	          JOIN users u1 ON u1.id = ip.creator_id
 	          LEFT JOIN users u2 ON u2.id = ip.moderator_id
@@ -806,12 +841,6 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 	              FROM iss_position_points
 	              GROUP BY iss_position_id
 	          ) ptot ON ptot.iss_position_id = ip.id
-	          LEFT JOIN (
-	              SELECT iss_position_id, COUNT(*) AS iss_coord_cnt
-	              FROM iss_position_points
-	              WHERE iss_latitude IS NOT NULL AND iss_longitude IS NOT NULL
-	              GROUP BY iss_position_id
-	          ) res ON res.iss_position_id = ip.id
 	          WHERE ip.status NOT IN ('draft','deleted')`
 
 	if status != "" {
@@ -834,6 +863,12 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 			args = append(args, toStr)
 		}
 	}
+	if pointsStr != "" {
+		if pointsCount, err := strconv.Atoi(pointsStr); err == nil && pointsCount >= 0 {
+			query += ` AND COALESCE(ptot.points_total, 0) = $` + strconv.Itoa(len(args)+1)
+			args = append(args, pointsCount)
+		}
+	}
 
 	query += ` ORDER BY ip.formed_at DESC NULLS LAST, ip.id DESC`
 
@@ -844,7 +879,7 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var items []ISSPositionListItem
+	items := make([]ISSPositionListItem, 0)
 	for rows.Next() {
 		var it ISSPositionListItem
 		var formedAt, completedAt, obsDate sql.NullTime
@@ -852,13 +887,12 @@ func issPositionsListAPIHandler(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&it.ID, &it.Status, &it.CreatedAt, &formedAt, &completedAt, &obsDate, &totalVis,
 			&it.CreatorLogin, &it.ModeratorLogin,
-			&it.ObservationPointsCount, &it.ISSPositionDeterminationResultsCount,
+			&it.ISSPositionDeterminationResultsCount,
 		); err != nil {
 			writeError(w, http.StatusInternalServerError, "Ошибка чтения строки: "+err.Error())
 			return
 		}
 		it.StatusRu = ISSPosition{Status: it.Status}.StatusRu()
-		it.ThemeRu = themeRUISSProject
 		if formedAt.Valid {
 			t := formedAt.Time
 			it.FormedAt = &t
@@ -949,10 +983,10 @@ func handleGetISSPosition(w http.ResponseWriter, r *http.Request, idStr string) 
 	}
 
 	resp.ObservationPointsCount = len(points)
-	for _, p := range points {
-		if p.ISSLatitude.Valid && p.ISSLongitude.Valid {
-			resp.ISSPositionDeterminationResultsCount++
-		}
+	if pos.Status == "completed" {
+		resp.ISSPositionDeterminationResultsCount = len(points)
+	} else {
+		resp.ISSPositionDeterminationResultsCount = 0
 	}
 
 	for _, p := range points {
